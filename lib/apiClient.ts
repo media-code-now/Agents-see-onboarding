@@ -38,10 +38,21 @@ export async function createClient(client: Omit<Client, 'id' | 'createdDate'>): 
       body: JSON.stringify(dbData),
     });
 
-    if (!res.ok) throw new Error('Failed to create client');
+    const responseData = await res.json();
+    console.log('createClient - raw response status:', res.status);
+    console.log('createClient - raw response data:', responseData);
     
-    const row: ClientDbRow = await res.json();
-    console.log('createClient - received row:', row);
+    if (!res.ok) {
+      throw new Error(`API returned ${res.status}: ${responseData?.error || 'Unknown error'}`);
+    }
+    
+    // Check if response is valid
+    if (!responseData || typeof responseData !== 'object' || !responseData.id) {
+      throw new Error(`Invalid response from API: ${JSON.stringify(responseData)}`);
+    }
+    
+    const row: ClientDbRow = responseData;
+    console.log('createClient - received valid row:', row);
     return dbRowToClient(row, row.name);
   } catch (error) {
     console.error('Error creating client:', error);
