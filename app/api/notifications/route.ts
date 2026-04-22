@@ -12,9 +12,13 @@ export async function GET(request: NextRequest) {
     const unreadOnly = request.nextUrl.searchParams.get('unread') === 'true';
     const limit = parseInt(request.nextUrl.searchParams.get('limit') || '50');
 
+    console.log('GET /api/notifications - userId:', session.user.id, 'unreadOnly:', unreadOnly, 'limit:', limit);
+
     const rows = unreadOnly
       ? await sql`SELECT * FROM notifications WHERE user_id = ${session.user.id} AND is_read = false ORDER BY created_at DESC LIMIT ${limit}`
       : await sql`SELECT * FROM notifications WHERE user_id = ${session.user.id} ORDER BY created_at DESC LIMIT ${limit}`;
+
+    console.log('GET /api/notifications - returned', rows.length, 'notifications');
 
     return NextResponse.json({ notifications: rows });
   } catch (error) {

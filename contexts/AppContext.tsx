@@ -110,6 +110,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           read_at: n.read_at as string | undefined,
         }));
 
+        console.log('Loaded notifications from API (initial load):', { total: mappedNotifications.length, raw: notificationsData });
+
         // Always use API data if available (even if empty arrays), only fallback to localStorage on error
         setData((prev) => ({
           ...prev,
@@ -166,6 +168,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           created_at: n.created_at as string,
           read_at: n.read_at as string | undefined,
         }));
+
+        console.log('Refreshed notifications from API (30s refresh):', { total: mappedNotifications.length, raw: notificationsData });
 
         // Always update with fresh API data to sync changes from other users
         setData((prev) => ({

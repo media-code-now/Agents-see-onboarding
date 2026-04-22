@@ -95,6 +95,11 @@ export default function NotificationBell() {
   const displayed = activeTab === 'unread' ? unread : all;
   const unreadCount = unread.length;
 
+  // Debug: Log notifications
+  useEffect(() => {
+    console.log('NotificationBell - notifications total:', all.length, 'unread:', unread.length, all);
+  }, [all, unread]);
+
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
