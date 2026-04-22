@@ -64,13 +64,33 @@ export async function POST(request: Request) {
     }
 
     // Create team member record
-    const rows = await sql`
+    const insertResult = await sql`
       INSERT INTO team_members (user_id, role, department, permissions, clients, added_by)
       VALUES (${userId ?? null}, ${body.role}, ${body.department ?? null},
               ${JSON.stringify(body.permissions ?? [])},
               ${JSON.stringify(body.clients ?? [])},
               ${session.user.id})
       RETURNING *
+    `;
+    
+    // Fetch the complete record with user info via JOIN
+    const teamMemberId = insertResult[0].id;
+    const rows = await sql`
+      SELECT 
+        tm.id,
+        tm.user_id,
+        tm.role,
+        tm.department,
+        tm.permissions,
+        tm.clients,
+        tm.is_active,
+        tm.date_added,
+        tm.added_by,
+        u.name,
+        u.email
+      FROM team_members tm
+      LEFT JOIN users u ON tm.user_id = u.id
+      WHERE tm.id = ${teamMemberId}
     `;
     
     return NextResponse.json(rows[0], { status: 201 });

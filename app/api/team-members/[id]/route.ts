@@ -10,14 +10,37 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const body = await request.json();
     const sql = getDb();
-    const rows = await sql`
+    
+    // Update the team member record
+    const updateResult = await sql`
       UPDATE team_members SET role = ${body.role}, department = ${body.department ?? null},
         permissions = ${JSON.stringify(body.permissions ?? [])},
         clients = ${JSON.stringify(body.clients ?? [])},
         updated_at = NOW()
       WHERE id = ${id} RETURNING *
     `;
-    if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    
+    if (!updateResult.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    
+    // Fetch the complete record with user info via JOIN
+    const rows = await sql`
+      SELECT 
+        tm.id,
+        tm.user_id,
+        tm.role,
+        tm.department,
+        tm.permissions,
+        tm.clients,
+        tm.is_active,
+        tm.date_added,
+        tm.added_by,
+        u.name,
+        u.email
+      FROM team_members tm
+      LEFT JOIN users u ON tm.user_id = u.id
+      WHERE tm.id = ${id}
+    `;
+    
     return NextResponse.json(rows[0]);
   } catch (error) {
     console.error('team-members PUT:', error);
