@@ -117,7 +117,7 @@ export async function updateWeeklyPlan(id: string, plan: Omit<WeeklyPlan, 'id'>)
   try {
     const dbData = weeklyPlanToDbRow(plan);
     const res = await fetch(`/api/weekly-plans/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dbData),
     });
@@ -181,7 +181,7 @@ export async function updateSecurityReview(id: string, review: Omit<SecurityRevi
   try {
     const dbData = securityReviewToDbRow(review);
     const res = await fetch(`/api/security-reviews/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dbData),
     });
@@ -252,7 +252,7 @@ export async function updateKanbanCard(id: string, card: Partial<Omit<KanbanCard
     if (card.dueDate) dbData.due_date = card.dueDate;
 
     const res = await fetch(`/api/kanban/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dbData),
     });
