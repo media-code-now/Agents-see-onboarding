@@ -100,6 +100,20 @@ export default function NotificationBell() {
     console.log('NotificationBell - notifications total:', all.length, 'unread:', unread.length);
   }, [all, unread]);
 
+  const createTestNotification = async () => {
+    try {
+      const res = await fetch('/api/test-notification', { method: 'POST' });
+      if (res.ok) {
+        console.log('Test notification created');
+        runNotificationCheck();
+      } else {
+        console.error('Failed to create test notification');
+      }
+    } catch (error) {
+      console.error('Error creating test notification:', error);
+    }
+  };
+
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -135,6 +149,13 @@ export default function NotificationBell() {
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-white">Notifications</h3>
               <div className="flex items-center gap-1">
+                <button
+                  onClick={createTestNotification}
+                  title="Create test notification"
+                  className="rounded-lg p-1.5 text-gray-400 transition-all hover:bg-white/10 hover:text-yellow-400"
+                >
+                  <Bell className="h-3.5 w-3.5" />
+                </button>
                 <button
                   onClick={runNotificationCheck}
                   title="Refresh"
