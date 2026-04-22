@@ -129,7 +129,7 @@ export default function ClientsPage() {
     };
 
     // Debug log
-    console.log('Form submitted with clientData:', clientData);
+    console.log('Form submitted - businessName:', clientData.businessName);
 
     if (editingClient) {
       updateClient(editingClient.id, clientData);
