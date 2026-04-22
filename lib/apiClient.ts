@@ -477,3 +477,21 @@ export async function broadcastNotification(
     return false;
   }
 }
+
+/**
+ * Client account operations
+ */
+export async function generateClientTempPassword(clientId: string): Promise<{ tempPassword: string } | null> {
+  try {
+    const res = await fetch(`/api/clients/${clientId}/generate-temp-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) throw new Error('Failed to generate temporary password');
+    const data = await res.json();
+    return { tempPassword: data.tempPassword };
+  } catch (error) {
+    console.error('Error generating temp password:', error);
+    return null;
+  }
+}

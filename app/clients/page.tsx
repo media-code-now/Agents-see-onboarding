@@ -22,6 +22,9 @@ export default function ClientsPage() {
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [generatingPassword, setGeneratingPassword] = useState(false);
+  const [generatedTempPassword, setGeneratedTempPassword] = useState<string | null>(null);
   
   // Filter states
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -811,7 +814,19 @@ export default function ClientsPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-400">Password</p>
-                    <p className="text-sm text-white">{viewingClient.websitePassword ? '••••••••' : 'Not provided'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-white flex-1">
+                        {viewingClient.websitePassword ? (showPasswords ? viewingClient.websitePassword : '••••••••') : 'Not provided'}
+                      </p>
+                      {viewingClient.websitePassword && (
+                        <button
+                          onClick={() => setShowPasswords(!showPasswords)}
+                          className="text-xs px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-gray-300"
+                        >
+                          {showPasswords ? 'Hide' : 'Show'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -904,6 +919,66 @@ export default function ClientsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-400">Social Media Links</p>
                   <p className="text-sm text-white whitespace-pre-wrap">{viewingClient.socialLinks || 'Not provided'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Client Account Credentials */}
+            <div className="border-t border-white/10 pt-4">
+              <h4 className="mb-3 font-semibold text-white">Client Account Login</h4>
+              <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-400">System Email</p>
+                  <p className="text-sm text-white break-all">{viewingClient.mainContact?.email || 'Not provided'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-400 mb-1">Temporary Login Password</p>
+                  {generatedTempPassword ? (
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm bg-black/30 px-3 py-2 rounded font-mono text-green-400 break-all">
+                        {generatedTempPassword}
+                      </code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedTempPassword);
+                          alert('Password copied to clipboard');
+                        }}
+                        className="text-xs px-2 py-1 rounded bg-green-500/20 hover:bg-green-500/30 text-green-300 whitespace-nowrap"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm bg-black/30 px-3 py-2 rounded text-center font-mono">
+                        ••••••••
+                      </code>
+                      <button
+                        onClick={async () => {
+                          setGeneratingPassword(true);
+                          try {
+                            const { generateClientTempPassword } = await import('@/lib/apiClient');
+                            const result = await generateClientTempPassword(viewingClient.id);
+                            if (result) {
+                              setGeneratedTempPassword(result.tempPassword);
+                            }
+                          } catch (error) {
+                            console.error('Error generating password:', error);
+                            alert('Failed to generate password');
+                          } finally {
+                            setGeneratingPassword(false);
+                          }
+                        }}
+                        disabled={generatingPassword}
+                        className="text-xs px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-gray-300 whitespace-nowrap disabled:opacity-50"
+                      >
+                        {generatingPassword ? 'Generating...' : 'Generate'}
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    🔒 Generate a temporary password for the client to use on first login. They will be prompted to change it.
+                  </p>
                 </div>
               </div>
             </div>

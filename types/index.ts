@@ -35,6 +35,9 @@ export interface Client {
   gbpURL?: string;
   socialLinks?: string;
   notes?: string;
+  // Client Account
+  clientEmail?: string;
+  clientPasswordTemp?: string;
   createdDate: string;
 }
 

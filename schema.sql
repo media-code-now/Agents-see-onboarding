@@ -19,22 +19,25 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- ─── Clients ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS clients (
-  id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name           VARCHAR(255) NOT NULL,
-  email          VARCHAR(255),
-  phone          VARCHAR(50),
-  website        VARCHAR(500),
-  google_drive   VARCHAR(500),
-  industry       VARCHAR(255),
-  status         VARCHAR(50) DEFAULT 'active',
-  monthly_budget DECIMAL(10, 2),
-  contract_start DATE,
-  contract_end   DATE,
-  notes          TEXT,
-  primary_contact VARCHAR(255),
-  created_date   TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  created_by     UUID REFERENCES users(id),
-  updated_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name                  VARCHAR(255) NOT NULL,
+  email                 VARCHAR(255),
+  phone                 VARCHAR(50),
+  website               VARCHAR(500),
+  google_drive          VARCHAR(500),
+  industry              VARCHAR(255),
+  status                VARCHAR(50) DEFAULT 'active',
+  monthly_budget        DECIMAL(10, 2),
+  contract_start        DATE,
+  contract_end          DATE,
+  notes                 TEXT,
+  primary_contact       VARCHAR(255),
+  client_email          VARCHAR(255) UNIQUE,
+  client_password_hash  VARCHAR(255),
+  client_password_temp  VARCHAR(255),
+  created_date          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_by            UUID REFERENCES users(id),
+  updated_at            TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- ─── Weekly Plans ─────────────────────────────────────────────────────────────
