@@ -31,6 +31,7 @@ export async function fetchClients(): Promise<Client[]> {
 export async function createClient(client: Omit<Client, 'id' | 'createdDate'>): Promise<Client | null> {
   try {
     const dbData = clientToDbRow(client);
+    console.log('createClient - sending dbData:', dbData);
     const res = await fetch('/api/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -40,6 +41,7 @@ export async function createClient(client: Omit<Client, 'id' | 'createdDate'>): 
     if (!res.ok) throw new Error('Failed to create client');
     
     const row: ClientDbRow = await res.json();
+    console.log('createClient - received row:', row);
     return dbRowToClient(row, row.name);
   } catch (error) {
     console.error('Error creating client:', error);
