@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/nextauth';
-import { neon } from '@neondatabase/serverless';
+import { getDb } from '@/lib/db';
 
 export async function POST() {
   try {
@@ -10,9 +10,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized - Master Admin required' }, { status: 401 });
     }
 
-    const url = process.env.DATABASE_URL;
-    if (!url) throw new Error('DATABASE_URL environment variable is not set');
-    const sql = neon(url);
+    const sql = getDb();
     
     console.log('Running migration 007: Add Access & Logins fields');
 
@@ -36,9 +34,19 @@ export async function POST() {
     for (const statement of columns) {
       try {
         const colName = statement.match(/ADD COLUMN IF NOT EXISTS (\w+)/)?.[1] || 'unknown';
-        // For DDL statements, we need to execute directly without template literal wrapping
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (sql as any)(statement);
+        // Use raw SQL - we need to construct the query string properly for Neon
+        // Neon's sql client requires template literals, so we'll build each one dynamically
+        if (statement.includes('website_cms')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS website_cms VARCHAR(255)`;
+        else if (statement.includes('website_login_url')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS website_login_url VARCHAR(500)`;
+        else if (statement.includes('website_username')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS website_username VARCHAR(255)`;
+        else if (statement.includes('website_password')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS website_password VARCHAR(255)`;
+        else if (statement.includes('hosting')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS hosting VARCHAR(255)`;
+        else if (statement.includes('domain_registrar')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS domain_registrar VARCHAR(255)`;
+        else if (statement.includes('google_analytics')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS google_analytics VARCHAR(500)`;
+        else if (statement.includes('search_console')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS search_console VARCHAR(500)`;
+        else if (statement.includes('google_business_profile')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS google_business_profile VARCHAR(500)`;
+        else if (statement.includes('tag_manager')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS tag_manager VARCHAR(500)`;
+        else if (statement.includes('other_tools')) await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS other_tools TEXT`;
         console.log(`✓ Added column ${colName}`);
         results.push({ column: colName, status: 'success' });
       } catch (error) {
@@ -69,7 +77,7 @@ export async function GET() {
 
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error('DATABASE_URL environment variable is not set');
-    const sql = neon(url);
+    const sql = getDb();
 
     // Check which columns exist
     const result = await sql`
