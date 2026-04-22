@@ -14,7 +14,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       UPDATE kanban_cards SET
         title = COALESCE(${body.title ?? null}, title),
         description = COALESCE(${body.description ?? null}, description),
-        column = COALESCE(${body.column ?? null}, column),
+        "column" = COALESCE(${body.column ?? null}, "column"),
         priority = COALESCE(${body.priority ?? null}, priority),
         assigned_to = COALESCE(${body.assignedTo ?? null}, assigned_to),
         due_date = COALESCE(${body.dueDate ?? null}, due_date),
@@ -24,6 +24,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(rows[0]);
   } catch (error) {
+    console.error('kanban PUT:', error);
     return NextResponse.json({ error: 'Failed to update kanban card' }, { status: 500 });
   }
 }
@@ -37,6 +38,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     await sql`DELETE FROM kanban_cards WHERE id = ${id}`;
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('kanban DELETE:', error);
     return NextResponse.json({ error: 'Failed to delete kanban card' }, { status: 500 });
   }
 }
