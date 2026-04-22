@@ -307,17 +307,23 @@ export async function fetchTeamMembers(): Promise<TeamMember[]> {
   }
 }
 
-export async function createTeamMember(member: Omit<TeamMember, 'id' | 'dateAdded'>): Promise<TeamMember | null> {
+export async function createTeamMember(member: Omit<TeamMember, 'id' | 'dateAdded'> & { email?: string; password?: string }): Promise<TeamMember | null> {
   try {
     const res = await fetch('/api/team-members', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        name: member.name,
+        email: member.email,
+        password: member.password,
         role: member.role,
       }),
     });
 
-    if (!res.ok) throw new Error('Failed to create team member');
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to create team member');
+    }
     
     const row: {
       id: string;

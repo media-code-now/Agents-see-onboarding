@@ -47,25 +47,27 @@ export default function TeamAccessPage() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    const clientsText = formData.get('clients') as string;
-    const clients = clientsText
-      .split(',')
-      .map((c) => c.trim())
-      .filter((c) => c);
+    // For new members, auto-assign all client IDs
+    const allClientIds = data.clients.map((c) => c.id);
 
     const memberData = {
       name: formData.get('name') as string,
-      email: formData.get('email') as string,
+      email: editingMember ? undefined : (formData.get('email') as string), // Only for new members
+      password: editingMember ? undefined : (formData.get('password') as string), // Only for new members
       role: formData.get('role') as TeamMember['role'],
-      clients: clients,
+      clients: allClientIds, // Auto-assign all clients
       accessNotes: formData.get('accessNotes') as string,
       notes: formData.get('notes') as string,
     };
 
     if (editingMember) {
-      updateTeamMember(editingMember.id, memberData);
+      // Remove undefined fields for edit
+      const editData = Object.fromEntries(
+        Object.entries(memberData).filter(([, v]) => v !== undefined)
+      );
+      updateTeamMember(editingMember.id, editData as any);
     } else {
-      addTeamMember(memberData);
+      addTeamMember(memberData as any);
     }
 
     setIsModalOpen(false);
@@ -228,16 +230,34 @@ export default function TeamAccessPage() {
                 className="mt-1 w-full rounded-2xl border border-white/10 bg-white/5 text-white backdrop-blur-xl px-3 py-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-400">Email</label>
-              <input
-                type="email"
-                name="email"
-                defaultValue={editingMember?.email}
-                className="mt-1 w-full rounded-2xl border border-white/10 bg-white/5 text-white backdrop-blur-xl px-3 py-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
+            {!editingMember && (
+              <div>
+                <label className="block text-sm font-medium text-gray-400">Email *</label>
+                <input
+                  type="email"
+                  name="email"
+                  required={!editingMember}
+                  className="mt-1 w-full rounded-2xl border border-white/10 bg-white/5 text-white backdrop-blur-xl px-3 py-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="team@example.com"
+                />
+              </div>
+            )}
           </div>
+
+          {!editingMember && (
+            <div>
+              <label className="block text-sm font-medium text-gray-400">Password *</label>
+              <input
+                type="password"
+                name="password"
+                required={!editingMember}
+                minLength={8}
+                className="mt-1 w-full rounded-2xl border border-white/10 bg-white/5 text-white backdrop-blur-xl px-3 py-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Min 8 characters"
+              />
+              <p className="mt-1 text-xs text-gray-400">Password must be at least 8 characters</p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-400">Role *</label>
@@ -256,16 +276,10 @@ export default function TeamAccessPage() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-400">Assigned Clients</label>
-            <input
-              type="text"
-              name="clients"
-              defaultValue={editingMember?.clients?.join(', ')}
-              placeholder="Client1, Client2, Client3"
-              className="mt-1 w-full rounded-2xl border border-white/10 bg-white/5 text-white backdrop-blur-xl px-3 py-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <p className="mt-1 text-xs text-gray-400">Separate multiple clients with commas</p>
+          <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-3">
+            <p className="text-sm text-blue-300">
+              ℹ️ This team member will be automatically assigned to all {data.clients.length} client(s) in the system.
+            </p>
           </div>
 
           <div>
