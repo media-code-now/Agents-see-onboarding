@@ -84,11 +84,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const loadDataFromApi = async () => {
       try {
-        const [clients, weeklyPlans, securityReviews, kanbanCards] = await Promise.all([
+        const [clients, weeklyPlans, securityReviews, kanbanCards, teamMembers] = await Promise.all([
           apiClient.fetchClients(),
           apiClient.fetchWeeklyPlans(),
           apiClient.fetchSecurityReviews(),
           apiClient.fetchKanbanCards(),
+          apiClient.fetchTeamMembers(),
         ]);
 
         setData((prev) => ({
@@ -97,6 +98,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           weeklyPlans: weeklyPlans.length > 0 ? weeklyPlans : prev.weeklyPlans,
           securityReviews: securityReviews.length > 0 ? securityReviews : prev.securityReviews,
           kanbanCards: kanbanCards.length > 0 ? kanbanCards : prev.kanbanCards,
+          teamMembers: teamMembers.length > 0 ? teamMembers : prev.teamMembers,
         }));
 
         hasLoadedDb.current = true;
@@ -301,29 +303,37 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setData((prev) => ({ ...prev, securityReviews: prev.securityReviews.filter((r) => r.id !== id) }));
   };
 
-  const addTeamMember = (member: Omit<TeamMember, 'id' | 'dateAdded'>) => {
-    const newMember: TeamMember = { ...member, id: Date.now().toString(), dateAdded: new Date().toISOString() };
-    setData((prev) => ({ ...prev, teamMembers: [...prev.teamMembers, newMember] }));
-    appendLog('create', 'team_member', newMember.id, newMember.name, [], null);
-  };
-
-  const updateTeamMember = (id: string, member: Omit<TeamMember, 'id' | 'dateAdded'>) => {
-    const before = data.teamMembers.find((m) => m.id === id);
-    setData((prev) => ({
-      ...prev,
-      teamMembers: prev.teamMembers.map((m) => (m.id === id ? { ...member, id, dateAdded: m.dateAdded } : m)),
-    }));
-    if (before) {
-      appendLog('update', 'team_member', id, before.name,
-        computeChanges(before as unknown as Record<string, unknown>, member as unknown as Record<string, unknown>),
-        before);
+  const addTeamMember = async (member: Omit<TeamMember, 'id' | 'dateAdded'>) => {
+    const apiResult = await apiClient.createTeamMember(member);
+    if (apiResult) {
+      setData((prev) => ({ ...prev, teamMembers: [...prev.teamMembers, apiResult] }));
+      appendLog('create', 'team_member', apiResult.id, apiResult.name, [], null);
     }
   };
 
-  const deleteTeamMember = (id: string) => {
+  const updateTeamMember = async (id: string, member: Omit<TeamMember, 'id' | 'dateAdded'>) => {
     const before = data.teamMembers.find((m) => m.id === id);
-    appendLog('delete', 'team_member', id, before?.name ?? id, [], before ?? null);
-    setData((prev) => ({ ...prev, teamMembers: prev.teamMembers.filter((m) => m.id !== id) }));
+    const apiResult = await apiClient.updateTeamMember(id, member);
+    if (apiResult) {
+      setData((prev) => ({
+        ...prev,
+        teamMembers: prev.teamMembers.map((m) => (m.id === id ? apiResult : m)),
+      }));
+      if (before) {
+        appendLog('update', 'team_member', id, before.name,
+          computeChanges(before as unknown as Record<string, unknown>, member as unknown as Record<string, unknown>),
+          before);
+      }
+    }
+  };
+
+  const deleteTeamMember = async (id: string) => {
+    const before = data.teamMembers.find((m) => m.id === id);
+    const success = await apiClient.deleteTeamMember(id);
+    if (success) {
+      appendLog('delete', 'team_member', id, before?.name ?? id, [], before ?? null);
+      setData((prev) => ({ ...prev, teamMembers: prev.teamMembers.filter((m) => m.id !== id) }));
+    }
   };
 
   const addKanbanCard = async (card: Omit<KanbanCard, 'id' | 'createdDate' | 'updatedDate'>) => {

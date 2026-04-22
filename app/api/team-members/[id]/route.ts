@@ -18,6 +18,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(rows[0]);
   } catch (error) {
+    console.error('team-members PUT:', error);
     return NextResponse.json({ error: 'Failed to update team member' }, { status: 500 });
   }
 }
@@ -31,6 +32,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     await sql`DELETE FROM team_members WHERE id = ${id}`;
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('team-members DELETE:', error);
     return NextResponse.json({ error: 'Failed to delete team member' }, { status: 500 });
   }
 }

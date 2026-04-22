@@ -4,7 +4,7 @@
  */
 
 import {
-  Client, WeeklyPlan, SecurityReview, KanbanCard,
+  Client, WeeklyPlan, SecurityReview, KanbanCard, TeamMember,
 } from '@/types';
 import {
   ClientDbRow, WeeklyPlanDbRow, SecurityReviewDbRow, KanbanCardDbRow,
@@ -272,6 +272,113 @@ export async function deleteKanbanCard(id: string): Promise<boolean> {
     return res.ok;
   } catch (error) {
     console.error('Error deleting kanban card:', error);
+    return false;
+  }
+}
+
+/**
+ * Team member operations
+ */
+export async function fetchTeamMembers(): Promise<TeamMember[]> {
+  try {
+    const res = await fetch('/api/team-members');
+    if (!res.ok) throw new Error('Failed to fetch team members');
+    
+    const rows: Array<{
+      id: string;
+      team_member_name: string;
+      email?: string;
+      role: string;
+      department?: string;
+      permissions?: string | string[];
+      date_added: string;
+    }> = await res.json();
+    
+    return rows.map(row => ({
+      id: row.id,
+      name: row.team_member_name,
+      email: row.email,
+      role: row.role as 'Account Manager' | 'SEO Specialist' | 'Content Writer' | 'Developer' | 'Virtual Assistant',
+      dateAdded: row.date_added,
+    }));
+  } catch (error) {
+    console.error('Error fetching team members:', error);
+    return [];
+  }
+}
+
+export async function createTeamMember(member: Omit<TeamMember, 'id' | 'dateAdded'>): Promise<TeamMember | null> {
+  try {
+    const res = await fetch('/api/team-members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        role: member.role,
+      }),
+    });
+
+    if (!res.ok) throw new Error('Failed to create team member');
+    
+    const row: {
+      id: string;
+      team_member_name: string;
+      email?: string;
+      role: string;
+      date_added: string;
+    } = await res.json();
+    
+    return {
+      id: row.id,
+      name: row.team_member_name,
+      email: row.email,
+      role: row.role as 'Account Manager' | 'SEO Specialist' | 'Content Writer' | 'Developer' | 'Virtual Assistant',
+      dateAdded: row.date_added,
+    };
+  } catch (error) {
+    console.error('Error creating team member:', error);
+    return null;
+  }
+}
+
+export async function updateTeamMember(id: string, member: Omit<TeamMember, 'id' | 'dateAdded'>): Promise<TeamMember | null> {
+  try {
+    const res = await fetch(`/api/team-members/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        role: member.role,
+      }),
+    });
+
+    if (!res.ok) throw new Error('Failed to update team member');
+    
+    const row: {
+      id: string;
+      team_member_name: string;
+      email?: string;
+      role: string;
+      date_added: string;
+    } = await res.json();
+    
+    return {
+      id: row.id,
+      name: row.team_member_name,
+      email: row.email,
+      role: row.role as 'Account Manager' | 'SEO Specialist' | 'Content Writer' | 'Developer' | 'Virtual Assistant',
+      dateAdded: row.date_added,
+    };
+  } catch (error) {
+    console.error('Error updating team member:', error);
+    return null;
+  }
+}
+
+export async function deleteTeamMember(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/team-members/${id}`, { method: 'DELETE' });
+    return res.ok;
+  } catch (error) {
+    console.error('Error deleting team member:', error);
     return false;
   }
 }

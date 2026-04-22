@@ -11,6 +11,7 @@ export async function GET() {
     const rows = await sql`SELECT * FROM team_members ORDER BY date_added DESC`;
     return NextResponse.json(rows);
   } catch (error) {
+    console.error('team-members GET:', error);
     return NextResponse.json({ error: 'Failed to fetch team members' }, { status: 500 });
   }
 }
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
     `;
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
+    console.error('team-members POST:', error);
     return NextResponse.json({ error: 'Failed to create team member' }, { status: 500 });
   }
 }
