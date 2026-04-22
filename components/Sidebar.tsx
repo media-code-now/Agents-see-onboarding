@@ -96,7 +96,16 @@ export default function Sidebar() {
           {/* Logo */}
           <div className="flex h-20 items-center border-b border-white/10 px-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Logo" className="h-14 w-auto object-contain" />
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="h-14 w-auto object-contain" 
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }} 
+            />
+            {/* Fallback text if logo fails */}
+            <div className="text-lg font-bold text-white">AGENTS</div>
           </div>
 
           {/* Navigation */}
