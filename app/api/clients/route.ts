@@ -58,7 +58,14 @@ export async function POST(request: Request) {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('clients POST error:', errorMsg);
-    console.error('Full error:', error);
-    return NextResponse.json({ error: 'Failed to create client', details: errorMsg }, { status: 500 });
+    console.error('Full error:', JSON.stringify(error, null, 2));
+    
+    // Extract more detailed error info if available
+    let details = errorMsg;
+    if (error instanceof Error && 'query' in error) {
+      details = `${errorMsg} - Query issue`;
+    }
+    
+    return NextResponse.json({ error: 'Failed to create client', details }, { status: 500 });
   }
 }
