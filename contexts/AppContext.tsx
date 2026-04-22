@@ -40,22 +40,22 @@ interface AppContextType {
   isMasterAdmin: boolean;
   addMasterAdmin: (email: string) => void;
   removeMasterAdmin: (email: string) => void;
-  addClient: (client: Omit<Client, 'id' | 'createdDate'>) => void;
-  updateClient: (id: string, client: Omit<Client, 'id' | 'createdDate'>) => void;
-  deleteClient: (id: string) => void;
-  addWeeklyPlan: (plan: Omit<WeeklyPlan, 'id'>) => void;
-  updateWeeklyPlan: (id: string, plan: Omit<WeeklyPlan, 'id'>) => void;
-  deleteWeeklyPlan: (id: string) => void;
-  addSecurityReview: (review: Omit<SecurityReview, 'id'>) => void;
-  updateSecurityReview: (id: string, review: Omit<SecurityReview, 'id'>) => void;
-  deleteSecurityReview: (id: string) => void;
-  addTeamMember: (member: Omit<TeamMember, 'id' | 'dateAdded'>) => void;
-  updateTeamMember: (id: string, member: Omit<TeamMember, 'id' | 'dateAdded'>) => void;
-  deleteTeamMember: (id: string) => void;
-  addKanbanCard: (card: Omit<KanbanCard, 'id' | 'createdDate' | 'updatedDate'>) => void;
-  updateKanbanCard: (id: string, card: Partial<Omit<KanbanCard, 'id' | 'createdDate'>>) => void;
-  deleteKanbanCard: (id: string) => void;
-  moveKanbanCard: (id: string, newColumn: KanbanCard['column']) => void;
+  addClient: (client: Omit<Client, 'id' | 'createdDate'>) => Promise<void>;
+  updateClient: (id: string, client: Omit<Client, 'id' | 'createdDate'>) => Promise<void>;
+  deleteClient: (id: string) => Promise<void>;
+  addWeeklyPlan: (plan: Omit<WeeklyPlan, 'id'>) => Promise<void>;
+  updateWeeklyPlan: (id: string, plan: Omit<WeeklyPlan, 'id'>) => Promise<void>;
+  deleteWeeklyPlan: (id: string) => Promise<void>;
+  addSecurityReview: (review: Omit<SecurityReview, 'id'>) => Promise<void>;
+  updateSecurityReview: (id: string, review: Omit<SecurityReview, 'id'>) => Promise<void>;
+  deleteSecurityReview: (id: string) => Promise<void>;
+  addTeamMember: (member: Omit<TeamMember, 'id' | 'dateAdded'>) => Promise<void>;
+  updateTeamMember: (id: string, member: Omit<TeamMember, 'id' | 'dateAdded'>) => Promise<void>;
+  deleteTeamMember: (id: string) => Promise<void>;
+  addKanbanCard: (card: Omit<KanbanCard, 'id' | 'createdDate' | 'updatedDate'>) => Promise<void>;
+  updateKanbanCard: (id: string, card: Partial<Omit<KanbanCard, 'id' | 'createdDate'>>) => Promise<void>;
+  deleteKanbanCard: (id: string) => Promise<void>;
+  moveKanbanCard: (id: string, newColumn: KanbanCard['column']) => Promise<void>;
   exportData: () => void;
   importData: (file: File) => Promise<void>;
   clearActivityLogs: () => void;
@@ -92,19 +92,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           apiClient.fetchTeamMembers(),
         ]);
 
+        // Always use API data if available (even if empty arrays), only fallback to localStorage on error
         setData((prev) => ({
           ...prev,
-          clients: clients.length > 0 ? clients : prev.clients,
-          weeklyPlans: weeklyPlans.length > 0 ? weeklyPlans : prev.weeklyPlans,
-          securityReviews: securityReviews.length > 0 ? securityReviews : prev.securityReviews,
-          kanbanCards: kanbanCards.length > 0 ? kanbanCards : prev.kanbanCards,
-          teamMembers: teamMembers.length > 0 ? teamMembers : prev.teamMembers,
+          clients,
+          weeklyPlans,
+          securityReviews,
+          kanbanCards,
+          teamMembers,
         }));
 
         hasLoadedDb.current = true;
       } catch (error) {
         console.error('Error loading data from API:', error);
         hasLoadedDb.current = true;
+        // Keep existing data on error
       } finally {
         setIsLoadingFromDb(false);
       }
@@ -112,6 +114,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setIsLoadingFromDb(true);
     loadDataFromApi();
+  }, [status]);
+
+  // Periodic refresh of data from API to sync changes from other users
+  useEffect(() => {
+    if (status !== 'authenticated' || !hasLoadedDb.current) return;
+
+    const refreshDataFromApi = async () => {
+      try {
+        const [clients, weeklyPlans, securityReviews, kanbanCards, teamMembers] = await Promise.all([
+          apiClient.fetchClients(),
+          apiClient.fetchWeeklyPlans(),
+          apiClient.fetchSecurityReviews(),
+          apiClient.fetchKanbanCards(),
+          apiClient.fetchTeamMembers(),
+        ]);
+
+        // Always update with fresh API data to sync changes from other users
+        setData((prev) => ({
+          ...prev,
+          clients,
+          weeklyPlans,
+          securityReviews,
+          kanbanCards,
+          teamMembers,
+        }));
+      } catch (error) {
+        console.error('Error refreshing data from API:', error);
+      }
+    };
+
+    // Refresh every 30 seconds to keep data synced across users
+    const interval = setInterval(refreshDataFromApi, 30 * 1000);
+    return () => clearInterval(interval);
   }, [status]);
 
   useEffect(() => {
