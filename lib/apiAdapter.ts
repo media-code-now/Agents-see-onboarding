@@ -163,7 +163,7 @@ export function dbRowToSecurityReview(row: SecurityReviewDbRow, clientName: stri
 export function dbRowToKanbanCard(row: KanbanCardDbRow): KanbanCard {
   return {
     id: row.id,
-    clientName: `Client ${row.client_id || 'Unknown'}`,
+    clientName: (row as any).client_name || `Client ${row.client_id || 'Unknown'}`,
     title: row.title,
     description: row.description,
     column: row.column as any,

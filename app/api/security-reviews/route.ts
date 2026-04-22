@@ -8,7 +8,14 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const sql = getDb();
-    const rows = await sql`SELECT * FROM security_reviews ORDER BY review_date DESC`;
+    const rows = await sql`
+      SELECT 
+        sr.*,
+        c.name as client_name
+      FROM security_reviews sr
+      LEFT JOIN clients c ON sr.client_id = c.id
+      ORDER BY sr.review_date DESC
+    `;
     return NextResponse.json(rows);
   } catch (error) {
     console.error('security-reviews GET:', error);

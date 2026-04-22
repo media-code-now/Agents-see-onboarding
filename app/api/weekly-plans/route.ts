@@ -8,7 +8,14 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const sql = getDb();
-    const rows = await sql`SELECT * FROM weekly_plans ORDER BY created_at DESC`;
+    const rows = await sql`
+      SELECT 
+        wp.*,
+        c.name as client_name
+      FROM weekly_plans wp
+      LEFT JOIN clients c ON wp.client_id = c.id
+      ORDER BY wp.created_at DESC
+    `;
     return NextResponse.json(rows);
   } catch (error) {
     console.error('weekly-plans GET:', error);

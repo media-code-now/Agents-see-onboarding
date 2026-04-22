@@ -85,8 +85,7 @@ export async function fetchWeeklyPlans(): Promise<WeeklyPlan[]> {
     if (!res.ok) throw new Error('Failed to fetch weekly plans');
     
     const rows: WeeklyPlanDbRow[] = await res.json();
-    // For now, use client_id as placeholder for clientName
-    return rows.map(row => dbRowToWeeklyPlan(row, `Client ${row.client_id}`));
+    return rows.map(row => dbRowToWeeklyPlan(row, (row as any).client_name || `Client ${row.client_id}`));
   } catch (error) {
     console.error('Error fetching weekly plans:', error);
     return [];
@@ -150,7 +149,7 @@ export async function fetchSecurityReviews(): Promise<SecurityReview[]> {
     if (!res.ok) throw new Error('Failed to fetch security reviews');
     
     const rows: SecurityReviewDbRow[] = await res.json();
-    return rows.map(row => dbRowToSecurityReview(row, `Client ${row.client_id}`));
+    return rows.map(row => dbRowToSecurityReview(row, (row as any).client_name || `Client ${row.client_id}`));
   } catch (error) {
     console.error('Error fetching security reviews:', error);
     return [];

@@ -8,7 +8,14 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const sql = getDb();
-    const rows = await sql`SELECT * FROM kanban_cards ORDER BY order_index ASC, created_date DESC`;
+    const rows = await sql`
+      SELECT 
+        kc.*,
+        c.name as client_name
+      FROM kanban_cards kc
+      LEFT JOIN clients c ON kc.client_id = c.id
+      ORDER BY kc.order_index ASC, kc.created_date DESC
+    `;
     return NextResponse.json(rows);
   } catch (error) {
     console.error('kanban GET:', error);
