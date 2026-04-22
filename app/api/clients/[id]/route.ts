@@ -36,6 +36,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         industry = ${body.industry ?? null},
         status = ${body.status ?? 'active'},
         notes = ${body.notes ?? null},
+        website_cms = ${body.websiteCMS ?? null},
+        website_login_url = ${body.websiteLoginURL ?? null},
+        website_username = ${body.websiteUsername ?? null},
+        website_password = ${body.websitePassword ?? null},
+        hosting = ${body.hosting ?? null},
+        domain_registrar = ${body.domainRegistrar ?? null},
+        google_analytics = ${body.googleAnalytics ?? null},
+        search_console = ${body.searchConsole ?? null},
+        google_business_profile = ${body.googleBusinessProfile ?? null},
+        tag_manager = ${body.tagManager ?? null},
+        other_tools = ${body.otherTools ?? null},
         updated_at = NOW()
       WHERE id = ${id}
       RETURNING *

@@ -26,6 +26,17 @@ export interface ClientDbRow {
   client_email?: string;
   client_password_hash?: string;
   client_password_temp?: string;
+  website_cms?: string;
+  website_login_url?: string;
+  website_username?: string;
+  website_password?: string;
+  hosting?: string;
+  domain_registrar?: string;
+  google_analytics?: string;
+  search_console?: string;
+  google_business_profile?: string;
+  tag_manager?: string;
+  other_tools?: string;
 }
 
 export interface WeeklyPlanDbRow {
@@ -98,17 +109,17 @@ export function dbRowToClient(row: ClientDbRow, clientName?: string): Client {
     timezone: undefined,
     locations: undefined,
     serviceAreas: undefined,
-    websiteCMS: undefined,
-    websiteLoginURL: undefined,
-    websiteUsername: undefined,
-    websitePassword: undefined,
-    hosting: undefined,
-    domainRegistrar: undefined,
-    googleAnalytics: undefined,
-    searchConsole: undefined,
-    googleBusinessProfile: undefined,
-    tagManager: undefined,
-    otherTools: undefined,
+    websiteCMS: row.website_cms,
+    websiteLoginURL: row.website_login_url,
+    websiteUsername: row.website_username,
+    websitePassword: row.website_password,
+    hosting: row.hosting,
+    domainRegistrar: row.domain_registrar,
+    googleAnalytics: row.google_analytics,
+    searchConsole: row.search_console,
+    googleBusinessProfile: row.google_business_profile,
+    tagManager: row.tag_manager,
+    otherTools: row.other_tools,
     mainServices: undefined,
     priorityServices: undefined,
     mainKeywords: undefined,
@@ -188,6 +199,17 @@ export function clientToDbRow(client: Omit<Client, 'id' | 'createdDate'>): Parti
     notes: client.notes,
     primary_contact: client.mainContact?.name,
     google_drive: client.googleDrive,
+    website_cms: client.websiteCMS,
+    website_login_url: client.websiteLoginURL,
+    website_username: client.websiteUsername,
+    website_password: client.websitePassword,
+    hosting: client.hosting,
+    domain_registrar: client.domainRegistrar,
+    google_analytics: client.googleAnalytics,
+    search_console: client.searchConsole,
+    google_business_profile: client.googleBusinessProfile,
+    tag_manager: client.tagManager,
+    other_tools: client.otherTools,
   };
 }
 
