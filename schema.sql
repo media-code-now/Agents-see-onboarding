@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS team_members (
   role        VARCHAR(100) NOT NULL,
   department  VARCHAR(100),
   permissions JSONB DEFAULT '[]',
+  clients     JSONB DEFAULT '[]',
   is_active   BOOLEAN DEFAULT TRUE,
   date_added  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   added_by    UUID REFERENCES users(id),

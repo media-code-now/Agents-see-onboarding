@@ -12,7 +12,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const sql = getDb();
     const rows = await sql`
       UPDATE team_members SET role = ${body.role}, department = ${body.department ?? null},
-        permissions = ${JSON.stringify(body.permissions ?? [])}, updated_at = NOW()
+        permissions = ${JSON.stringify(body.permissions ?? [])},
+        clients = ${JSON.stringify(body.clients ?? [])},
+        updated_at = NOW()
       WHERE id = ${id} RETURNING *
     `;
     if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });

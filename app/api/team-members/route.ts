@@ -49,9 +49,11 @@ export async function POST(request: Request) {
 
     // Create team member record
     const rows = await sql`
-      INSERT INTO team_members (user_id, role, department, permissions, added_by)
+      INSERT INTO team_members (user_id, role, department, permissions, clients, added_by)
       VALUES (${userId ?? null}, ${body.role}, ${body.department ?? null},
-              ${JSON.stringify(body.permissions ?? [])}, ${session.user.id})
+              ${JSON.stringify(body.permissions ?? [])},
+              ${JSON.stringify(body.clients ?? [])},
+              ${session.user.id})
       RETURNING *
     `;
     
