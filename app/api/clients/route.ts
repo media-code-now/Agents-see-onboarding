@@ -23,9 +23,18 @@ export async function POST(request: Request) {
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    console.log('POST /api/clients - received body:', body);
+    console.log('POST /api/clients - received body:', JSON.stringify(body, null, 2));
     
     const sql = getDb();
+    
+    // Validate that we have at least a name
+    if (!body.name) {
+      console.error('Missing required field: name');
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    }
+
+    console.log('About to insert client with name:', body.name);
+    
     const rows = await sql`
       INSERT INTO clients (
         name, email, phone, website, industry, status, notes, primary_contact, created_by,
@@ -34,8 +43,8 @@ export async function POST(request: Request) {
         google_business_profile, tag_manager, other_tools
       )
       VALUES (
-        ${body.name ?? null}, ${body.email ?? null}, ${body.phone ?? null},
-        ${body.website ?? null}, ${body.industry ?? null}, ${body.status ?? 'active'},
+        ${body.name}, ${body.email ?? null}, ${body.phone ?? null},
+        ${body.website ?? null}, ${body.industry ?? null}, ${'active'},
         ${body.notes ?? null}, ${body.primary_contact ?? null}, ${session.user.id},
         ${body.website_cms ?? null}, ${body.website_login_url ?? null}, ${body.website_username ?? null},
         ${body.website_password ?? null}, ${body.hosting ?? null}, ${body.domain_registrar ?? null},
@@ -47,7 +56,8 @@ export async function POST(request: Request) {
     console.log('POST /api/clients - created client:', rows[0]);
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
-    console.error('clients POST:', error);
-    return NextResponse.json({ error: 'Failed to create client' }, { status: 500 });
+    console.error('clients POST error:', error instanceof Error ? error.message : String(error));
+    console.error('Full error:', error);
+    return NextResponse.json({ error: 'Failed to create client', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
