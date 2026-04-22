@@ -97,7 +97,7 @@ export default function NotificationBell() {
 
   // Debug: Log notifications
   useEffect(() => {
-    console.log('NotificationBell - notifications total:', all.length, 'unread:', unread.length, all);
+    console.log('NotificationBell - notifications total:', all.length, 'unread:', unread.length);
   }, [all, unread]);
 
   // Close on outside click

@@ -52,7 +52,7 @@ export async function updateClient(id: string, client: Omit<Client, 'id' | 'crea
     const dbData = clientToDbRow(client);
     console.log('Sending to API:', { id, dbData });
     const res = await fetch(`/api/clients/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dbData),
     });
