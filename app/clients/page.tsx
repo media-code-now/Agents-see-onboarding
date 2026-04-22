@@ -128,6 +128,9 @@ export default function ClientsPage() {
       notes: formData.get('notes') as string,
     };
 
+    // Debug log
+    console.log('Form submitted with clientData:', clientData);
+
     if (editingClient) {
       updateClient(editingClient.id, clientData);
     } else {

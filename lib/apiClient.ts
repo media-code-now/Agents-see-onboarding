@@ -50,6 +50,7 @@ export async function createClient(client: Omit<Client, 'id' | 'createdDate'>): 
 export async function updateClient(id: string, client: Omit<Client, 'id' | 'createdDate'>): Promise<Client | null> {
   try {
     const dbData = clientToDbRow(client);
+    console.log('Sending to API:', { id, dbData });
     const res = await fetch(`/api/clients/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -59,6 +60,7 @@ export async function updateClient(id: string, client: Omit<Client, 'id' | 'crea
     if (!res.ok) throw new Error('Failed to update client');
     
     const row: ClientDbRow = await res.json();
+    console.log('Response from API:', row);
     return dbRowToClient(row, row.name);
   } catch (error) {
     console.error('Error updating client:', error);
