@@ -9,7 +9,23 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const sql = getDb();
-    const rows = await sql`SELECT * FROM team_members ORDER BY date_added DESC`;
+    const rows = await sql`
+      SELECT 
+        tm.id,
+        tm.user_id,
+        tm.role,
+        tm.department,
+        tm.permissions,
+        tm.clients,
+        tm.is_active,
+        tm.date_added,
+        tm.added_by,
+        u.name,
+        u.email
+      FROM team_members tm
+      LEFT JOIN users u ON tm.user_id = u.id
+      ORDER BY tm.date_added DESC
+    `;
     return NextResponse.json(rows);
   } catch (error) {
     console.error('team-members GET:', error);

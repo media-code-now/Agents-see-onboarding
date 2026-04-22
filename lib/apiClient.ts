@@ -286,19 +286,21 @@ export async function fetchTeamMembers(): Promise<TeamMember[]> {
     
     const rows: Array<{
       id: string;
-      team_member_name: string;
+      name?: string;
       email?: string;
       role: string;
       department?: string;
       permissions?: string | string[];
+      clients?: any[];
       date_added: string;
     }> = await res.json();
     
     return rows.map(row => ({
       id: row.id,
-      name: row.team_member_name,
+      name: row.name || 'Unnamed',
       email: row.email,
       role: row.role as 'Account Manager' | 'SEO Specialist' | 'Content Writer' | 'Developer' | 'Virtual Assistant',
+      clients: Array.isArray(row.clients) ? row.clients : [],
       dateAdded: row.date_added,
     }));
   } catch (error) {
@@ -317,6 +319,7 @@ export async function createTeamMember(member: Omit<TeamMember, 'id' | 'dateAdde
         email: member.email,
         password: member.password,
         role: member.role,
+        clients: member.clients || [],
       }),
     });
 
@@ -327,17 +330,19 @@ export async function createTeamMember(member: Omit<TeamMember, 'id' | 'dateAdde
     
     const row: {
       id: string;
-      team_member_name: string;
+      name?: string;
       email?: string;
       role: string;
+      clients?: any[];
       date_added: string;
     } = await res.json();
     
     return {
       id: row.id,
-      name: row.team_member_name,
+      name: row.name || 'Unnamed',
       email: row.email,
       role: row.role as 'Account Manager' | 'SEO Specialist' | 'Content Writer' | 'Developer' | 'Virtual Assistant',
+      clients: Array.isArray(row.clients) ? row.clients : [],
       dateAdded: row.date_added,
     };
   } catch (error) {
@@ -353,6 +358,7 @@ export async function updateTeamMember(id: string, member: Omit<TeamMember, 'id'
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         role: member.role,
+        clients: member.clients || [],
       }),
     });
 
@@ -360,17 +366,19 @@ export async function updateTeamMember(id: string, member: Omit<TeamMember, 'id'
     
     const row: {
       id: string;
-      team_member_name: string;
+      name?: string;
       email?: string;
       role: string;
+      clients?: any[];
       date_added: string;
     } = await res.json();
     
     return {
       id: row.id,
-      name: row.team_member_name,
+      name: row.name || 'Unnamed',
       email: row.email,
       role: row.role as 'Account Manager' | 'SEO Specialist' | 'Content Writer' | 'Developer' | 'Virtual Assistant',
+      clients: Array.isArray(row.clients) ? row.clients : [],
       dateAdded: row.date_added,
     };
   } catch (error) {

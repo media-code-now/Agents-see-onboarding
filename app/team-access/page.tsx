@@ -169,7 +169,7 @@ export default function TeamAccessPage() {
                       <p className="text-xs font-medium text-gray-400">Assigned Clients</p>
                       <p className="text-sm text-white">
                         {member.clients && member.clients.length > 0
-                          ? member.clients.join(', ')
+                          ? `${member.clients.length} client${member.clients.length === 1 ? '' : 's'} assigned`
                           : 'No clients assigned'}
                       </p>
                     </div>
