@@ -23,6 +23,9 @@ export interface ClientDbRow {
   created_date: string;
   created_by?: string;
   updated_at?: string;
+  client_email?: string;
+  client_password_hash?: string;
+  client_password_temp?: string;
 }
 
 export interface WeeklyPlanDbRow {
@@ -89,6 +92,8 @@ export function dbRowToClient(row: ClientDbRow, clientName?: string): Client {
     } : undefined,
     notes: row.notes,
     createdDate: row.created_date,
+    clientEmail: row.client_email,
+    clientPasswordTemp: row.client_password_temp,
     // Optional fields with defaults
     timezone: undefined,
     locations: undefined,
