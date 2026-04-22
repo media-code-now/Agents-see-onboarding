@@ -61,9 +61,9 @@ interface AppContextType {
   clearActivityLogs: () => void;
   rollbackActivity: (logId: string) => boolean;
   // Notifications
-  markNotificationRead: (id: string) => void;
-  markAllNotificationsRead: () => void;
-  deleteNotification: (id: string) => void;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
   updateNotificationPrefs: (prefs: Partial<NotificationPreferences>) => void;
   runNotificationCheck: () => void;
   sendEmailNotifications: () => Promise<void>;
@@ -574,29 +574,38 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [runNotificationCheck]);
 
-  const markNotificationRead = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      notifications: prev.notifications.map((n) =>
-        n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
-      ),
-    }));
+  const markNotificationRead = async (id: string) => {
+    const success = await apiClient.markNotificationRead(id);
+    if (success) {
+      setData((prev) => ({
+        ...prev,
+        notifications: prev.notifications.map((n) =>
+          n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
+        ),
+      }));
+    }
   };
 
-  const markAllNotificationsRead = () => {
-    setData((prev) => ({
-      ...prev,
-      notifications: prev.notifications.map((n) =>
-        n.is_read ? n : { ...n, is_read: true, read_at: new Date().toISOString() }
-      ),
-    }));
+  const markAllNotificationsRead = async () => {
+    const success = await apiClient.markAllNotificationsRead();
+    if (success) {
+      setData((prev) => ({
+        ...prev,
+        notifications: prev.notifications.map((n) =>
+          n.is_read ? n : { ...n, is_read: true, read_at: new Date().toISOString() }
+        ),
+      }));
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      notifications: prev.notifications.filter((n) => n.id !== id),
-    }));
+  const deleteNotification = async (id: string) => {
+    const success = await apiClient.deleteNotification(id);
+    if (success) {
+      setData((prev) => ({
+        ...prev,
+        notifications: prev.notifications.filter((n) => n.id !== id),
+      }));
+    }
   };
 
   const updateNotificationPrefs = (prefs: Partial<NotificationPreferences>) => {
