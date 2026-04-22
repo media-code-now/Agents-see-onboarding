@@ -9,6 +9,7 @@ import {
 import { Notification, NotificationPreferences } from '@/types/notification';
 import { loadData, saveData, exportData as exportDataUtil, importData as importDataUtil, MAX_ACTIVITY_LOGS, MAX_NOTIFICATIONS } from '@/lib/storage';
 import { runNotificationEngine, filterNewCandidates, candidateToNotification } from '@/lib/notificationEngine';
+import * as apiClient from '@/lib/apiClient';
 
 // Fields that must never be logged in plaintext
 const REDACTED_FIELDS = new Set(['websitePassword', 'password']);
@@ -73,7 +74,43 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [data, setData] = useState<AppData>(() => loadData());
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const [isLoadingFromDb, setIsLoadingFromDb] = useState(true);
+  const hasLoadedDb = useRef(false);
+
+  // Fetch data from API when authenticated
+  useEffect(() => {
+    if (status !== 'authenticated' || hasLoadedDb.current) return;
+
+    const loadDataFromApi = async () => {
+      try {
+        const [clients, weeklyPlans, securityReviews, kanbanCards] = await Promise.all([
+          apiClient.fetchClients(),
+          apiClient.fetchWeeklyPlans(),
+          apiClient.fetchSecurityReviews(),
+          apiClient.fetchKanbanCards(),
+        ]);
+
+        setData((prev) => ({
+          ...prev,
+          clients: clients.length > 0 ? clients : prev.clients,
+          weeklyPlans: weeklyPlans.length > 0 ? weeklyPlans : prev.weeklyPlans,
+          securityReviews: securityReviews.length > 0 ? securityReviews : prev.securityReviews,
+          kanbanCards: kanbanCards.length > 0 ? kanbanCards : prev.kanbanCards,
+        }));
+
+        hasLoadedDb.current = true;
+      } catch (error) {
+        console.error('Error loading data from API:', error);
+        hasLoadedDb.current = true;
+      } finally {
+        setIsLoadingFromDb(false);
+      }
+    };
+
+    setIsLoadingFromDb(true);
+    loadDataFromApi();
+  }, [status]);
 
   useEffect(() => {
     saveData(data);
@@ -157,18 +194,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
-  const addClient = (client: Omit<Client, 'id' | 'createdDate'>) => {
-    const newClient: Client = { ...client, id: Date.now().toString(), createdDate: new Date().toISOString() };
-    setData((prev) => ({ ...prev, clients: [...prev.clients, newClient] }));
-    appendLog('create', 'client', newClient.id, newClient.businessName, [], null);
+  const addClient = async (client: Omit<Client, 'id' | 'createdDate'>) => {
+    const apiResult = await apiClient.createClient(client);
+    if (apiResult) {
+      setData((prev) => ({ ...prev, clients: [...prev.clients, apiResult] }));
+      appendLog('create', 'client', apiResult.id, apiResult.businessName, [], null);
+    } else {
+      // Fallback to local creation if API fails
+      const newClient: Client = { ...client, id: Date.now().toString(), createdDate: new Date().toISOString() };
+      setData((prev) => ({ ...prev, clients: [...prev.clients, newClient] }));
+      appendLog('create', 'client', newClient.id, newClient.businessName, [], null);
+    }
   };
 
-  const updateClient = (id: string, client: Omit<Client, 'id' | 'createdDate'>) => {
+  const updateClient = async (id: string, client: Omit<Client, 'id' | 'createdDate'>) => {
     const before = data.clients.find((c) => c.id === id);
+    const apiResult = await apiClient.updateClient(id, client);
+    
     setData((prev) => ({
       ...prev,
-      clients: prev.clients.map((c) => (c.id === id ? { ...client, id, createdDate: c.createdDate } : c)),
+      clients: prev.clients.map((c) => (c.id === id ? (apiResult || { ...client, id, createdDate: c.createdDate }) : c)),
     }));
+    
     if (before) {
       appendLog('update', 'client', id, before.businessName,
         computeChanges(before as unknown as Record<string, unknown>, client as unknown as Record<string, unknown>),
@@ -176,23 +223,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const deleteClient = (id: string) => {
+  const deleteClient = async (id: string) => {
     const before = data.clients.find((c) => c.id === id);
     appendLog('delete', 'client', id, before?.businessName ?? id, [], before ?? null);
+    
+    await apiClient.deleteClient(id);
     setData((prev) => ({ ...prev, clients: prev.clients.filter((c) => c.id !== id) }));
   };
 
-  const addWeeklyPlan = (plan: Omit<WeeklyPlan, 'id'>) => {
-    const newPlan: WeeklyPlan = { ...plan, id: Date.now().toString() };
-    setData((prev) => ({ ...prev, weeklyPlans: [...prev.weeklyPlans, newPlan] }));
-    appendLog('create', 'weekly_plan', newPlan.id, `${newPlan.clientName} – ${newPlan.weekOf}`, [], null);
+  const addWeeklyPlan = async (plan: Omit<WeeklyPlan, 'id'>) => {
+    const apiResult = await apiClient.createWeeklyPlan(plan);
+    if (apiResult) {
+      setData((prev) => ({ ...prev, weeklyPlans: [...prev.weeklyPlans, apiResult] }));
+      appendLog('create', 'weekly_plan', apiResult.id, `${apiResult.clientName} – ${apiResult.weekOf}`, [], null);
+    } else {
+      const newPlan: WeeklyPlan = { ...plan, id: Date.now().toString() };
+      setData((prev) => ({ ...prev, weeklyPlans: [...prev.weeklyPlans, newPlan] }));
+      appendLog('create', 'weekly_plan', newPlan.id, `${newPlan.clientName} – ${newPlan.weekOf}`, [], null);
+    }
   };
 
-  const updateWeeklyPlan = (id: string, plan: Omit<WeeklyPlan, 'id'>) => {
+  const updateWeeklyPlan = async (id: string, plan: Omit<WeeklyPlan, 'id'>) => {
     const before = data.weeklyPlans.find((p) => p.id === id);
+    const apiResult = await apiClient.updateWeeklyPlan(id, plan);
+    
     setData((prev) => ({
       ...prev,
-      weeklyPlans: prev.weeklyPlans.map((p) => (p.id === id ? { ...plan, id } : p)),
+      weeklyPlans: prev.weeklyPlans.map((p) => (p.id === id ? (apiResult || { ...plan, id }) : p)),
     }));
     if (before) {
       appendLog('update', 'weekly_plan', id, `${before.clientName} – ${before.weekOf}`,
@@ -201,23 +258,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const deleteWeeklyPlan = (id: string) => {
+  const deleteWeeklyPlan = async (id: string) => {
     const before = data.weeklyPlans.find((p) => p.id === id);
     appendLog('delete', 'weekly_plan', id, before ? `${before.clientName} – ${before.weekOf}` : id, [], before ?? null);
+    
+    await apiClient.deleteWeeklyPlan(id);
     setData((prev) => ({ ...prev, weeklyPlans: prev.weeklyPlans.filter((p) => p.id !== id) }));
   };
 
-  const addSecurityReview = (review: Omit<SecurityReview, 'id'>) => {
-    const newReview: SecurityReview = { ...review, id: Date.now().toString() };
-    setData((prev) => ({ ...prev, securityReviews: [...prev.securityReviews, newReview] }));
-    appendLog('create', 'security_review', newReview.id, `${newReview.clientName} – ${newReview.reviewDate}`, [], null);
+  const addSecurityReview = async (review: Omit<SecurityReview, 'id'>) => {
+    const apiResult = await apiClient.createSecurityReview(review);
+    if (apiResult) {
+      setData((prev) => ({ ...prev, securityReviews: [...prev.securityReviews, apiResult] }));
+      appendLog('create', 'security_review', apiResult.id, `${apiResult.clientName} – ${apiResult.reviewDate}`, [], null);
+    } else {
+      const newReview: SecurityReview = { ...review, id: Date.now().toString() };
+      setData((prev) => ({ ...prev, securityReviews: [...prev.securityReviews, newReview] }));
+      appendLog('create', 'security_review', newReview.id, `${newReview.clientName} – ${newReview.reviewDate}`, [], null);
+    }
   };
 
-  const updateSecurityReview = (id: string, review: Omit<SecurityReview, 'id'>) => {
+  const updateSecurityReview = async (id: string, review: Omit<SecurityReview, 'id'>) => {
     const before = data.securityReviews.find((r) => r.id === id);
+    const apiResult = await apiClient.updateSecurityReview(id, review);
+    
     setData((prev) => ({
       ...prev,
-      securityReviews: prev.securityReviews.map((r) => (r.id === id ? { ...review, id } : r)),
+      securityReviews: prev.securityReviews.map((r) => (r.id === id ? (apiResult || { ...review, id }) : r)),
     }));
     if (before) {
       appendLog('update', 'security_review', id, `${before.clientName} – ${before.reviewDate}`,
@@ -226,9 +293,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const deleteSecurityReview = (id: string) => {
+  const deleteSecurityReview = async (id: string) => {
     const before = data.securityReviews.find((r) => r.id === id);
     appendLog('delete', 'security_review', id, before ? `${before.clientName} – ${before.reviewDate}` : id, [], before ?? null);
+    
+    await apiClient.deleteSecurityReview(id);
     setData((prev) => ({ ...prev, securityReviews: prev.securityReviews.filter((r) => r.id !== id) }));
   };
 
@@ -257,19 +326,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setData((prev) => ({ ...prev, teamMembers: prev.teamMembers.filter((m) => m.id !== id) }));
   };
 
-  const addKanbanCard = (card: Omit<KanbanCard, 'id' | 'createdDate' | 'updatedDate'>) => {
-    const now = new Date().toISOString();
-    const newCard: KanbanCard = { ...card, id: Date.now().toString(), createdDate: now, updatedDate: now };
-    setData((prev) => ({ ...prev, kanbanCards: [...prev.kanbanCards, newCard] }));
-    appendLog('create', 'kanban_card', newCard.id, `${newCard.clientName} – ${newCard.title}`, [], null);
+  const addKanbanCard = async (card: Omit<KanbanCard, 'id' | 'createdDate' | 'updatedDate'>) => {
+    const apiResult = await apiClient.createKanbanCard(card);
+    if (apiResult) {
+      setData((prev) => ({ ...prev, kanbanCards: [...prev.kanbanCards, apiResult] }));
+      appendLog('create', 'kanban_card', apiResult.id, `${apiResult.clientName} – ${apiResult.title}`, [], null);
+    } else {
+      const now = new Date().toISOString();
+      const newCard: KanbanCard = { ...card, id: Date.now().toString(), createdDate: now, updatedDate: now };
+      setData((prev) => ({ ...prev, kanbanCards: [...prev.kanbanCards, newCard] }));
+      appendLog('create', 'kanban_card', newCard.id, `${newCard.clientName} – ${newCard.title}`, [], null);
+    }
   };
 
-  const updateKanbanCard = (id: string, card: Partial<Omit<KanbanCard, 'id' | 'createdDate'>>) => {
+  const updateKanbanCard = async (id: string, card: Partial<Omit<KanbanCard, 'id' | 'createdDate'>>) => {
     const before = data.kanbanCards.find((c) => c.id === id);
+    const apiResult = await apiClient.updateKanbanCard(id, card);
+    
     setData((prev) => ({
       ...prev,
       kanbanCards: prev.kanbanCards.map((c) =>
-        c.id === id ? { ...c, ...card, updatedDate: new Date().toISOString() } : c
+        c.id === id ? (apiResult || { ...c, ...card, updatedDate: new Date().toISOString() }) : c
       ),
     }));
     if (before) {
@@ -279,14 +356,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const deleteKanbanCard = (id: string) => {
+  const deleteKanbanCard = async (id: string) => {
     const before = data.kanbanCards.find((c) => c.id === id);
     appendLog('delete', 'kanban_card', id, before ? `${before.clientName} – ${before.title}` : id, [], before ?? null);
+    
+    await apiClient.deleteKanbanCard(id);
     setData((prev) => ({ ...prev, kanbanCards: prev.kanbanCards.filter((c) => c.id !== id) }));
   };
 
-  const moveKanbanCard = (id: string, newColumn: KanbanCard['column']) => {
+  const moveKanbanCard = async (id: string, newColumn: KanbanCard['column']) => {
     const before = data.kanbanCards.find((c) => c.id === id);
+    await apiClient.updateKanbanCard(id, { column: newColumn });
+    
     setData((prev) => ({
       ...prev,
       kanbanCards: prev.kanbanCards.map((c) =>

@@ -1,0 +1,277 @@
+/**
+ * API Client Wrapper
+ * Handles all database API calls with proper type conversion
+ */
+
+import {
+  Client, WeeklyPlan, SecurityReview, KanbanCard,
+} from '@/types';
+import {
+  ClientDbRow, WeeklyPlanDbRow, SecurityReviewDbRow, KanbanCardDbRow,
+  dbRowToClient, dbRowToWeeklyPlan, dbRowToSecurityReview, dbRowToKanbanCard,
+  clientToDbRow, weeklyPlanToDbRow, securityReviewToDbRow, kanbanCardToDbRow,
+} from './apiAdapter';
+
+/**
+ * Client operations
+ */
+export async function fetchClients(): Promise<Client[]> {
+  try {
+    const res = await fetch('/api/clients');
+    if (!res.ok) throw new Error('Failed to fetch clients');
+    
+    const rows: ClientDbRow[] = await res.json();
+    return rows.map(row => dbRowToClient(row, row.name));
+  } catch (error) {
+    console.error('Error fetching clients:', error);
+    return [];
+  }
+}
+
+export async function createClient(client: Omit<Client, 'id' | 'createdDate'>): Promise<Client | null> {
+  try {
+    const dbData = clientToDbRow(client);
+    const res = await fetch('/api/clients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbData),
+    });
+
+    if (!res.ok) throw new Error('Failed to create client');
+    
+    const row: ClientDbRow = await res.json();
+    return dbRowToClient(row, row.name);
+  } catch (error) {
+    console.error('Error creating client:', error);
+    return null;
+  }
+}
+
+export async function updateClient(id: string, client: Omit<Client, 'id' | 'createdDate'>): Promise<Client | null> {
+  try {
+    const dbData = clientToDbRow(client);
+    const res = await fetch(`/api/clients/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbData),
+    });
+
+    if (!res.ok) throw new Error('Failed to update client');
+    
+    const row: ClientDbRow = await res.json();
+    return dbRowToClient(row, row.name);
+  } catch (error) {
+    console.error('Error updating client:', error);
+    return null;
+  }
+}
+
+export async function deleteClient(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+    return res.ok;
+  } catch (error) {
+    console.error('Error deleting client:', error);
+    return false;
+  }
+}
+
+/**
+ * Weekly Plans operations
+ */
+export async function fetchWeeklyPlans(): Promise<WeeklyPlan[]> {
+  try {
+    const res = await fetch('/api/weekly-plans');
+    if (!res.ok) throw new Error('Failed to fetch weekly plans');
+    
+    const rows: WeeklyPlanDbRow[] = await res.json();
+    // For now, use client_id as placeholder for clientName
+    return rows.map(row => dbRowToWeeklyPlan(row, `Client ${row.client_id}`));
+  } catch (error) {
+    console.error('Error fetching weekly plans:', error);
+    return [];
+  }
+}
+
+export async function createWeeklyPlan(plan: Omit<WeeklyPlan, 'id'>): Promise<WeeklyPlan | null> {
+  try {
+    const dbData = weeklyPlanToDbRow(plan);
+    const res = await fetch('/api/weekly-plans', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbData),
+    });
+
+    if (!res.ok) throw new Error('Failed to create weekly plan');
+    
+    const row: WeeklyPlanDbRow = await res.json();
+    return dbRowToWeeklyPlan(row, plan.clientName);
+  } catch (error) {
+    console.error('Error creating weekly plan:', error);
+    return null;
+  }
+}
+
+export async function updateWeeklyPlan(id: string, plan: Omit<WeeklyPlan, 'id'>): Promise<WeeklyPlan | null> {
+  try {
+    const dbData = weeklyPlanToDbRow(plan);
+    const res = await fetch(`/api/weekly-plans/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbData),
+    });
+
+    if (!res.ok) throw new Error('Failed to update weekly plan');
+    
+    const row: WeeklyPlanDbRow = await res.json();
+    return dbRowToWeeklyPlan(row, plan.clientName);
+  } catch (error) {
+    console.error('Error updating weekly plan:', error);
+    return null;
+  }
+}
+
+export async function deleteWeeklyPlan(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/weekly-plans/${id}`, { method: 'DELETE' });
+    return res.ok;
+  } catch (error) {
+    console.error('Error deleting weekly plan:', error);
+    return false;
+  }
+}
+
+/**
+ * Security Reviews operations
+ */
+export async function fetchSecurityReviews(): Promise<SecurityReview[]> {
+  try {
+    const res = await fetch('/api/security-reviews');
+    if (!res.ok) throw new Error('Failed to fetch security reviews');
+    
+    const rows: SecurityReviewDbRow[] = await res.json();
+    return rows.map(row => dbRowToSecurityReview(row, `Client ${row.client_id}`));
+  } catch (error) {
+    console.error('Error fetching security reviews:', error);
+    return [];
+  }
+}
+
+export async function createSecurityReview(review: Omit<SecurityReview, 'id'>): Promise<SecurityReview | null> {
+  try {
+    const dbData = securityReviewToDbRow(review);
+    const res = await fetch('/api/security-reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbData),
+    });
+
+    if (!res.ok) throw new Error('Failed to create security review');
+    
+    const row: SecurityReviewDbRow = await res.json();
+    return dbRowToSecurityReview(row, review.clientName);
+  } catch (error) {
+    console.error('Error creating security review:', error);
+    return null;
+  }
+}
+
+export async function updateSecurityReview(id: string, review: Omit<SecurityReview, 'id'>): Promise<SecurityReview | null> {
+  try {
+    const dbData = securityReviewToDbRow(review);
+    const res = await fetch(`/api/security-reviews/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbData),
+    });
+
+    if (!res.ok) throw new Error('Failed to update security review');
+    
+    const row: SecurityReviewDbRow = await res.json();
+    return dbRowToSecurityReview(row, review.clientName);
+  } catch (error) {
+    console.error('Error updating security review:', error);
+    return null;
+  }
+}
+
+export async function deleteSecurityReview(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/security-reviews/${id}`, { method: 'DELETE' });
+    return res.ok;
+  } catch (error) {
+    console.error('Error deleting security review:', error);
+    return false;
+  }
+}
+
+/**
+ * Kanban Cards operations
+ */
+export async function fetchKanbanCards(): Promise<KanbanCard[]> {
+  try {
+    const res = await fetch('/api/kanban');
+    if (!res.ok) throw new Error('Failed to fetch kanban cards');
+    
+    const rows: KanbanCardDbRow[] = await res.json();
+    return rows.map(row => dbRowToKanbanCard(row));
+  } catch (error) {
+    console.error('Error fetching kanban cards:', error);
+    return [];
+  }
+}
+
+export async function createKanbanCard(card: Omit<KanbanCard, 'id' | 'createdDate' | 'updatedDate'>): Promise<KanbanCard | null> {
+  try {
+    const dbData = kanbanCardToDbRow(card);
+    const res = await fetch('/api/kanban', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbData),
+    });
+
+    if (!res.ok) throw new Error('Failed to create kanban card');
+    
+    const row: KanbanCardDbRow = await res.json();
+    return dbRowToKanbanCard(row);
+  } catch (error) {
+    console.error('Error creating kanban card:', error);
+    return null;
+  }
+}
+
+export async function updateKanbanCard(id: string, card: Partial<Omit<KanbanCard, 'id' | 'createdDate'>>): Promise<KanbanCard | null> {
+  try {
+    const dbData: Record<string, unknown> = {};
+    if (card.title) dbData.title = card.title;
+    if (card.description) dbData.description = card.description;
+    if (card.column) dbData.column = card.column;
+    if (card.assignedTo) dbData.assigned_to = card.assignedTo;
+    if (card.priority) dbData.priority = card.priority;
+    if (card.dueDate) dbData.due_date = card.dueDate;
+
+    const res = await fetch(`/api/kanban/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbData),
+    });
+
+    if (!res.ok) throw new Error('Failed to update kanban card');
+    
+    const row: KanbanCardDbRow = await res.json();
+    return dbRowToKanbanCard(row);
+  } catch (error) {
+    console.error('Error updating kanban card:', error);
+    return null;
+  }
+}
+
+export async function deleteKanbanCard(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/kanban/${id}`, { method: 'DELETE' });
+    return res.ok;
+  } catch (error) {
+    console.error('Error deleting kanban card:', error);
+    return false;
+  }
+}
