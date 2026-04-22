@@ -39,9 +39,10 @@ export async function POST(request: Request) {
     for (const statement of statements) {
       try {
         await sql.unsafe(statement);
-      } catch (error: any) {
+      } catch (error) {
         // Ignore "already exists" errors
-        if (!error.message?.includes('already exists') && !error.message?.includes('already defined')) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (!errorMessage.includes('already exists') && !errorMessage.includes('already defined')) {
           throw error;
         }
       }
@@ -52,10 +53,11 @@ export async function POST(request: Request) {
       message: `Successfully applied migration: ${migrationFile}`,
       statementsRun: statements.length 
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Migration error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to run migration';
     return NextResponse.json({ 
-      error: error.message || 'Failed to run migration' 
+      error: errorMessage 
     }, { status: 500 });
   }
 }
@@ -72,8 +74,9 @@ export async function GET() {
     const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql'));
 
     return NextResponse.json({ migrations: files });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Failed to list migrations:', error);
-    return NextResponse.json({ error: 'Failed to list migrations' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to list migrations';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
