@@ -446,3 +446,34 @@ export async function deleteNotification(id: string): Promise<boolean> {
     return false;
   }
 }
+
+export async function broadcastNotification(
+  type: string,
+  title: string,
+  message: string,
+  priority: 'low' | 'medium' | 'high' = 'medium',
+  link?: string,
+  entity_type?: string,
+  entity_id?: string
+): Promise<boolean> {
+  try {
+    const res = await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type,
+        title,
+        message,
+        priority,
+        link: link || null,
+        entity_type: entity_type || null,
+        entity_id: entity_id || null,
+        broadcast: true,
+      }),
+    });
+    return res.ok;
+  } catch (error) {
+    console.error('Error broadcasting notification:', error);
+    return false;
+  }
+}

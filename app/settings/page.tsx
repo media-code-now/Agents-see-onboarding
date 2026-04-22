@@ -54,6 +54,9 @@ export default function SettingsPage() {
 
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [emailTestStatus, setEmailTestStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastStatus, setBroadcastStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   const prefs = data.notificationPrefs;
 
@@ -80,6 +83,28 @@ export default function SettingsPage() {
     } catch {
       setEmailTestStatus('error');
       setTimeout(() => setEmailTestStatus('idle'), 3000);
+    }
+  };
+
+  const handleBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastTitle.trim() || !broadcastMessage.trim()) {
+      alert('Please enter both title and message');
+      return;
+    }
+
+    setBroadcastStatus('sending');
+    try {
+      const { broadcastNotification } = await import('@/lib/apiClient');
+      await broadcastNotification('system', broadcastTitle, broadcastMessage, 'high');
+      setBroadcastStatus('sent');
+      setBroadcastTitle('');
+      setBroadcastMessage('');
+      setTimeout(() => setBroadcastStatus('idle'), 3000);
+    } catch (error) {
+      console.error('Broadcast error:', error);
+      setBroadcastStatus('error');
+      setTimeout(() => setBroadcastStatus('idle'), 3000);
     }
   };
 
@@ -344,6 +369,66 @@ export default function SettingsPage() {
                 <p>Without this, alerts are logged to the server console only.</p>
               </div>
             </div>
+          </CardBody>
+        </Card>
+
+        {/* ── Broadcast Notifications ───────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Send className="h-5 w-5 text-green-400" />
+              <h2 className="text-lg font-semibold text-white">Broadcast Notification</h2>
+            </div>
+            <p className="mt-1 text-sm text-gray-400">
+              Send a notification to all users in the system.
+            </p>
+          </CardHeader>
+          <CardBody>
+            <form onSubmit={handleBroadcast} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Notification Title</label>
+                <input
+                  type="text"
+                  value={broadcastTitle}
+                  onChange={(e) => setBroadcastTitle(e.target.value)}
+                  placeholder="e.g., System Maintenance"
+                  maxLength={100}
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white backdrop-blur-xl placeholder-gray-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Message</label>
+                <textarea
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  placeholder="Enter the notification message..."
+                  maxLength={500}
+                  rows={4}
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white backdrop-blur-xl placeholder-gray-500 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 resize-none"
+                />
+                <p className="mt-1 text-xs text-gray-500">{broadcastMessage.length}/500 characters</p>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={broadcastStatus === 'sending'}
+                  className="inline-flex items-center gap-2 rounded-full bg-green-500/20 border border-green-500/30 px-6 py-2.5 text-sm font-semibold text-green-300 transition-all hover:bg-green-500/30 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Send className="h-4 w-4" />
+                  {broadcastStatus === 'sending' ? 'Sending…' : broadcastStatus === 'sent' ? 'Sent!' : 'Send to All Users'}
+                </button>
+                {broadcastStatus === 'sent' && (
+                  <span className="text-sm text-green-400 flex items-center gap-1">
+                    <CheckCircle className="h-4 w-4" /> Notification sent to all users
+                  </span>
+                )}
+                {broadcastStatus === 'error' && (
+                  <span className="text-sm text-red-400">Failed — check console</span>
+                )}
+              </div>
+            </form>
           </CardBody>
         </Card>
 
