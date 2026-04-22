@@ -56,8 +56,9 @@ export async function POST(request: Request) {
     console.log('POST /api/clients - created client:', rows[0]);
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
-    console.error('clients POST error:', error instanceof Error ? error.message : String(error));
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('clients POST error:', errorMsg);
     console.error('Full error:', error);
-    return NextResponse.json({ error: 'Failed to create client', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create client', details: errorMsg }, { status: 500 });
   }
 }
