@@ -84,13 +84,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const loadDataFromApi = async () => {
       try {
-        const [clients, weeklyPlans, securityReviews, kanbanCards, teamMembers] = await Promise.all([
+        const [clients, weeklyPlans, securityReviews, kanbanCards, teamMembers, notificationsData] = await Promise.all([
           apiClient.fetchClients(),
           apiClient.fetchWeeklyPlans(),
           apiClient.fetchSecurityReviews(),
           apiClient.fetchKanbanCards(),
           apiClient.fetchTeamMembers(),
+          apiClient.fetchNotifications(),
         ]);
+
+        // Map DB rows to Notification objects
+        const mappedNotifications: Notification[] = notificationsData.map((n: Record<string, unknown>) => ({
+          id: n.id as string,
+          user_id: n.user_id as string,
+          type: n.type as any,
+          priority: n.priority as any || 'medium',
+          title: n.title as string,
+          message: n.message as string,
+          link: n.link as string | undefined,
+          entity_type: n.entity_type as any,
+          entity_id: n.entity_id as string | undefined,
+          is_read: (n.is_read as boolean) || false,
+          is_emailed: (n.is_emailed as boolean) || false,
+          created_at: n.created_at as string,
+          read_at: n.read_at as string | undefined,
+        }));
 
         // Always use API data if available (even if empty arrays), only fallback to localStorage on error
         setData((prev) => ({
@@ -100,6 +118,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           securityReviews,
           kanbanCards,
           teamMembers,
+          notifications: mappedNotifications,
         }));
 
         hasLoadedDb.current = true;
@@ -122,13 +141,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const refreshDataFromApi = async () => {
       try {
-        const [clients, weeklyPlans, securityReviews, kanbanCards, teamMembers] = await Promise.all([
+        const [clients, weeklyPlans, securityReviews, kanbanCards, teamMembers, notificationsData] = await Promise.all([
           apiClient.fetchClients(),
           apiClient.fetchWeeklyPlans(),
           apiClient.fetchSecurityReviews(),
           apiClient.fetchKanbanCards(),
           apiClient.fetchTeamMembers(),
+          apiClient.fetchNotifications(),
         ]);
+
+        // Map DB rows to Notification objects
+        const mappedNotifications: Notification[] = notificationsData.map((n: Record<string, unknown>) => ({
+          id: n.id as string,
+          user_id: n.user_id as string,
+          type: n.type as any,
+          priority: n.priority as any || 'medium',
+          title: n.title as string,
+          message: n.message as string,
+          link: n.link as string | undefined,
+          entity_type: n.entity_type as any,
+          entity_id: n.entity_id as string | undefined,
+          is_read: (n.is_read as boolean) || false,
+          is_emailed: (n.is_emailed as boolean) || false,
+          created_at: n.created_at as string,
+          read_at: n.read_at as string | undefined,
+        }));
 
         // Always update with fresh API data to sync changes from other users
         setData((prev) => ({
@@ -138,6 +175,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           securityReviews,
           kanbanCards,
           teamMembers,
+          notifications: mappedNotifications,
         }));
       } catch (error) {
         console.error('Error refreshing data from API:', error);

@@ -382,3 +382,53 @@ export async function deleteTeamMember(id: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Notification operations
+ */
+export async function fetchNotifications(): Promise<Record<string, unknown>[]> {
+  try {
+    const res = await fetch('/api/notifications');
+    if (!res.ok) throw new Error('Failed to fetch notifications');
+    
+    const data: { notifications: Record<string, unknown>[] } = await res.json();
+    return data.notifications || [];
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return [];
+  }
+}
+
+export async function markNotificationRead(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/notifications/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isRead: true }),
+    });
+    return res.ok;
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    return false;
+  }
+}
+
+export async function markAllNotificationsRead(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/notifications/mark-all-read', { method: 'PATCH' });
+    return res.ok;
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    return false;
+  }
+}
+
+export async function deleteNotification(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/notifications/${id}`, { method: 'DELETE' });
+    return res.ok;
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    return false;
+  }
+}
