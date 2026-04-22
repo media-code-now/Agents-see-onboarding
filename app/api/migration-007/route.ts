@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/nextauth';
-import { getDb } from '@/lib/db';
+import { neon } from '@neondatabase/serverless';
 
 export async function POST() {
   try {
@@ -10,37 +10,42 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized - Master Admin required' }, { status: 401 });
     }
 
-    const sql = getDb();
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error('DATABASE_URL environment variable is not set');
+    const sql = neon(url);
     
     console.log('Running migration 007: Add Access & Logins fields');
 
-    // Add columns one by one to handle any issues
+    // Add columns one by one with individual SQL calls
     const columns = [
-      { name: 'website_cms', type: 'VARCHAR(255)' },
-      { name: 'website_login_url', type: 'VARCHAR(500)' },
-      { name: 'website_username', type: 'VARCHAR(255)' },
-      { name: 'website_password', type: 'VARCHAR(255)' },
-      { name: 'hosting', type: 'VARCHAR(255)' },
-      { name: 'domain_registrar', type: 'VARCHAR(255)' },
-      { name: 'google_analytics', type: 'VARCHAR(500)' },
-      { name: 'search_console', type: 'VARCHAR(500)' },
-      { name: 'google_business_profile', type: 'VARCHAR(500)' },
-      { name: 'tag_manager', type: 'VARCHAR(500)' },
-      { name: 'other_tools', type: 'TEXT' },
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS website_cms VARCHAR(255)',
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS website_login_url VARCHAR(500)',
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS website_username VARCHAR(255)',
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS website_password VARCHAR(255)',
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS hosting VARCHAR(255)',
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS domain_registrar VARCHAR(255)',
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS google_analytics VARCHAR(500)',
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS search_console VARCHAR(500)',
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS google_business_profile VARCHAR(500)',
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS tag_manager VARCHAR(500)',
+      'ALTER TABLE clients ADD COLUMN IF NOT EXISTS other_tools TEXT',
     ];
 
     const results: { column: string; status: string; error?: string }[] = [];
 
-    for (const col of columns) {
+    for (const statement of columns) {
       try {
-        const query = `ALTER TABLE clients ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`;
-        await sql.unsafe(query);
-        console.log(`✓ Added column ${col.name}`);
-        results.push({ column: col.name, status: 'success' });
+        const colName = statement.match(/ADD COLUMN IF NOT EXISTS (\w+)/)?.[1] || 'unknown';
+        // For DDL statements, we need to execute directly without template literal wrapping
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (sql as any)(statement);
+        console.log(`✓ Added column ${colName}`);
+        results.push({ column: colName, status: 'success' });
       } catch (error) {
+        const colName = statement.match(/ADD COLUMN IF NOT EXISTS (\w+)/)?.[1] || 'unknown';
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`✗ Error adding ${col.name}: ${errorMsg}`);
-        results.push({ column: col.name, status: 'error', error: errorMsg });
+        console.error(`✗ Error adding ${colName}: ${errorMsg}`);
+        results.push({ column: colName, status: 'error', error: errorMsg });
       }
     }
 
@@ -62,7 +67,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized - Master Admin required' }, { status: 401 });
     }
 
-    const sql = getDb();
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error('DATABASE_URL environment variable is not set');
+    const sql = neon(url);
 
     // Check which columns exist
     const result = await sql`
