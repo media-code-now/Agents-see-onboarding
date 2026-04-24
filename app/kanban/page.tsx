@@ -41,6 +41,7 @@ function KanbanPage() {
   const { data, addKanbanCard, updateKanbanCard, deleteKanbanCard, moveKanbanCard } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<KanbanCard | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -136,8 +137,9 @@ function KanbanPage() {
     (startDate ? 1 : 0) +
     (endDate ? 1 : 0);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSaving(true);
     const formData = new FormData(e.currentTarget);
 
     const tagsText = formData.get('tags') as string;
@@ -158,11 +160,12 @@ function KanbanPage() {
     };
 
     if (editingCard) {
-      updateKanbanCard(editingCard.id, cardData);
+      await updateKanbanCard(editingCard.id, cardData);
     } else {
-      addKanbanCard(cardData);
+      await addKanbanCard(cardData);
     }
 
+    setIsSaving(false);
     setIsModalOpen(false);
     setEditingCard(null);
   };
@@ -553,19 +556,21 @@ function KanbanPage() {
           <div className="flex gap-3 pt-4">
             <button
               type="button"
+              disabled={isSaving}
               onClick={() => {
                 setIsModalOpen(false);
                 setEditingCard(null);
               }}
-              className="flex-1 rounded-2xl border border-white/10 px-6 py-3 text-sm font-medium text-gray-400 transition-all hover:bg-white/10"
+              className="flex-1 rounded-2xl border border-white/10 px-6 py-3 text-sm font-medium text-gray-400 transition-all hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-2xl bg-blue-500 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-blue-600 hover:scale-105"
+              disabled={isSaving}
+              className="flex-1 rounded-2xl bg-blue-500 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-blue-600 hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {editingCard ? 'Update' : 'Create'} Card
+              {isSaving ? 'Saving…' : (editingCard ? 'Update' : 'Create') + ' Card'}
             </button>
           </div>
         </form>

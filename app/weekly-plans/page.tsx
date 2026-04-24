@@ -17,6 +17,7 @@ export default function WeeklyPlansPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<WeeklyPlan | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [viewingPlan, setViewingPlan] = useState<WeeklyPlan | null>(null);
   
   // Search and filter states
@@ -81,8 +82,9 @@ export default function WeeklyPlansPage() {
     (startDate ? 1 : 0) +
     (endDate ? 1 : 0);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSaving(true);
     const formData = new FormData(e.currentTarget);
 
     const onPageTasks = formData.get('onPageTasks') as string;
@@ -104,11 +106,12 @@ export default function WeeklyPlansPage() {
     };
 
     if (editingPlan) {
-      updateWeeklyPlan(editingPlan.id, planData);
+      await updateWeeklyPlan(editingPlan.id, planData);
     } else {
-      addWeeklyPlan(planData);
+      await addWeeklyPlan(planData);
     }
 
+    setIsSaving(false);
     setIsModalOpen(false);
     setEditingPlan(null);
   };
@@ -417,19 +420,21 @@ export default function WeeklyPlansPage() {
           <div className="flex gap-3 pt-4">
             <button
               type="button"
+              disabled={isSaving}
               onClick={() => {
                 setIsModalOpen(false);
                 setEditingPlan(null);
               }}
-              className="flex-1 rounded-2xl border border-white/10 px-6 py-3 text-sm font-medium text-gray-400 transition-all hover:bg-white/10"
+              className="flex-1 rounded-2xl border border-white/10 px-6 py-3 text-sm font-medium text-gray-400 transition-all hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-2xl bg-blue-500 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-blue-600 hover:scale-105"
+              disabled={isSaving}
+              className="flex-1 rounded-2xl bg-blue-500 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-blue-600 hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {editingPlan ? 'Update' : 'Create'} Plan
+              {isSaving ? 'Saving…' : (editingPlan ? 'Update' : 'Create') + ' Plan'}
             </button>
           </div>
         </form>
