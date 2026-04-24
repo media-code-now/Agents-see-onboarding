@@ -96,9 +96,13 @@ export interface KanbanCardDbRow {
   column: string;
   assigned_to?: string;
   priority?: string;
+  category?: string;
   due_date?: string;
+  tags?: string[];
   order_index?: number;
-  created_at: string;
+  created_date?: string;
+  updated_date?: string;
+  created_at?: string;
   updated_at?: string;
 }
 
@@ -185,18 +189,20 @@ export function dbRowToSecurityReview(row: SecurityReviewDbRow, clientName: stri
 }
 
 export function dbRowToKanbanCard(row: KanbanCardDbRow): KanbanCard {
+  const created = row.created_date || row.created_at || '';
   return {
     id: row.id,
-    clientName: (row as any).client_name || `Client ${row.client_id || 'Unknown'}`,
+    clientName: (row as any).client_name || '',
     title: row.title,
     description: row.description,
-    column: row.column as KanbanCard['column'],
-    assignedTo: row.assigned_to,
-    priority: row.priority as KanbanCard['priority'],
-    createdDate: row.created_at,
-    updatedDate: row.updated_at || row.created_at,
+    column: (row.column || 'todo') as KanbanCard['column'],
+    priority: (row.priority || 'medium') as KanbanCard['priority'],
+    category: (row.category || 'Other') as KanbanCard['category'],
+    assignedTo: row.assigned_to || undefined,
     dueDate: row.due_date,
-    category: 'Other',
+    tags: row.tags || [],
+    createdDate: created,
+    updatedDate: row.updated_date || row.updated_at || created,
   };
 }
 
@@ -264,8 +270,10 @@ export function kanbanCardToDbRow(card: Omit<KanbanCard, 'id' | 'createdDate' | 
     title: card.title,
     description: card.description,
     column: card.column,
-    assigned_to: card.assignedTo,
     priority: card.priority,
+    category: card.category,
+    assigned_to: card.assignedTo,
     due_date: card.dueDate,
+    tags: card.tags,
   };
 }

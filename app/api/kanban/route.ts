@@ -9,7 +9,7 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const sql = getDb();
     const rows = await sql`
-      SELECT 
+      SELECT
         kc.*,
         c.name as client_name
       FROM kanban_cards kc
@@ -29,12 +29,31 @@ export async function POST(request: Request) {
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await request.json();
     const sql = getDb();
+
+    // Look up client_id from clientName
+    let clientId: string | null = null;
+    if (body.clientName) {
+      const clientRows = await sql`SELECT id FROM clients WHERE name = ${body.clientName} LIMIT 1`;
+      clientId = clientRows[0]?.id ?? null;
+    }
+
     const rows = await sql`
-      INSERT INTO kanban_cards (client_id, title, description, "column", priority, assigned_to, due_date, created_by)
-      VALUES (${body.clientId ?? null}, ${body.title}, ${body.description ?? null},
-              ${body.column ?? 'todo'}, ${body.priority ?? 'medium'},
-              ${body.assignedTo ?? null}, ${body.dueDate ?? null}, ${session.user.id})
-      RETURNING *
+      INSERT INTO kanban_cards
+        (client_id, title, description, "column", priority, assigned_to, due_date, category, tags, order_index, created_by)
+      VALUES
+        (${clientId},
+         ${body.title},
+         ${body.description ?? null},
+         ${body.column ?? 'todo'},
+         ${body.priority ?? 'medium'},
+         ${body.assignedTo ?? null},
+         ${body.dueDate ?? null},
+         ${body.category ?? 'Other'},
+         ${body.tags ?? null},
+         0,
+         ${session.user.id})
+      RETURNING *,
+        (SELECT name FROM clients WHERE id = client_id) AS client_name
     `;
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {

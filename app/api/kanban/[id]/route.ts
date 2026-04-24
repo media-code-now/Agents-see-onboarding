@@ -10,16 +10,29 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const body = await request.json();
     const sql = getDb();
+
+    // Look up client_id from clientName if provided
+    let clientId: string | null = null;
+    if (body.clientName) {
+      const clientRows = await sql`SELECT id FROM clients WHERE name = ${body.clientName} LIMIT 1`;
+      clientId = clientRows[0]?.id ?? null;
+    }
+
     const rows = await sql`
       UPDATE kanban_cards SET
-        title = COALESCE(${body.title ?? null}, title),
-        description = COALESCE(${body.description ?? null}, description),
-        "column" = COALESCE(${body.column ?? null}, "column"),
-        priority = COALESCE(${body.priority ?? null}, priority),
-        assigned_to = COALESCE(${body.assignedTo ?? null}, assigned_to),
-        due_date = COALESCE(${body.dueDate ?? null}, due_date),
+        client_id   = COALESCE(${clientId}, client_id),
+        title       = COALESCE(${body.title ?? null}, title),
+        description = ${body.description ?? null},
+        "column"    = COALESCE(${body.column ?? null}, "column"),
+        priority    = COALESCE(${body.priority ?? null}, priority),
+        assigned_to = ${body.assignedTo ?? null},
+        due_date    = ${body.dueDate ?? null},
+        category    = COALESCE(${body.category ?? null}, category),
+        tags        = ${body.tags ?? null},
         updated_date = NOW()
-      WHERE id = ${id} RETURNING *
+      WHERE id = ${id}
+      RETURNING *,
+        (SELECT name FROM clients WHERE id = client_id) AS client_name
     `;
     if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(rows[0]);

@@ -230,15 +230,22 @@ export async function fetchKanbanCards(): Promise<KanbanCard[]> {
 
 export async function createKanbanCard(card: Omit<KanbanCard, 'id' | 'createdDate' | 'updatedDate'>): Promise<KanbanCard | null> {
   try {
-    const dbData = kanbanCardToDbRow(card);
     const res = await fetch('/api/kanban', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dbData),
+      body: JSON.stringify({
+        clientName: card.clientName,
+        title: card.title,
+        description: card.description,
+        column: card.column,
+        priority: card.priority,
+        category: card.category,
+        assignedTo: card.assignedTo,
+        dueDate: card.dueDate,
+        tags: card.tags,
+      }),
     });
-
     if (!res.ok) throw new Error('Failed to create kanban card');
-    
     const row: KanbanCardDbRow = await res.json();
     return dbRowToKanbanCard(row);
   } catch (error) {
@@ -249,22 +256,22 @@ export async function createKanbanCard(card: Omit<KanbanCard, 'id' | 'createdDat
 
 export async function updateKanbanCard(id: string, card: Partial<Omit<KanbanCard, 'id' | 'createdDate'>>): Promise<KanbanCard | null> {
   try {
-    const dbData: Record<string, unknown> = {};
-    if (card.title) dbData.title = card.title;
-    if (card.description) dbData.description = card.description;
-    if (card.column) dbData.column = card.column;
-    if (card.assignedTo) dbData.assigned_to = card.assignedTo;
-    if (card.priority) dbData.priority = card.priority;
-    if (card.dueDate) dbData.due_date = card.dueDate;
-
     const res = await fetch(`/api/kanban/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dbData),
+      body: JSON.stringify({
+        clientName: card.clientName,
+        title: card.title,
+        description: card.description,
+        column: card.column,
+        priority: card.priority,
+        category: card.category,
+        assignedTo: card.assignedTo,
+        dueDate: card.dueDate,
+        tags: card.tags,
+      }),
     });
-
     if (!res.ok) throw new Error('Failed to update kanban card');
-    
     const row: KanbanCardDbRow = await res.json();
     return dbRowToKanbanCard(row);
   } catch (error) {
