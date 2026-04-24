@@ -31,7 +31,6 @@ export async function fetchClients(): Promise<Client[]> {
 export async function createClient(client: Omit<Client, 'id' | 'createdDate'>): Promise<Client | null> {
   try {
     const dbData = clientToDbRow(client);
-    console.log('createClient - sending dbData:', dbData);
     const res = await fetch('/api/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -39,20 +38,16 @@ export async function createClient(client: Omit<Client, 'id' | 'createdDate'>): 
     });
 
     const responseData = await res.json();
-    console.log('createClient - raw response status:', res.status);
-    console.log('createClient - raw response data:', responseData);
-    
+
     if (!res.ok) {
       throw new Error(`API returned ${res.status}: ${responseData?.error || 'Unknown error'}`);
     }
-    
-    // Check if response is valid
+
     if (!responseData || typeof responseData !== 'object' || !responseData.id) {
       throw new Error(`Invalid response from API: ${JSON.stringify(responseData)}`);
     }
-    
+
     const row: ClientDbRow = responseData;
-    console.log('createClient - received valid row:', row);
     return dbRowToClient(row, row.name);
   } catch (error) {
     console.error('Error creating client:', error);
@@ -63,7 +58,6 @@ export async function createClient(client: Omit<Client, 'id' | 'createdDate'>): 
 export async function updateClient(id: string, client: Omit<Client, 'id' | 'createdDate'>): Promise<Client | null> {
   try {
     const dbData = clientToDbRow(client);
-    console.log('Sending to API:', { id, dbData });
     const res = await fetch(`/api/clients/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -71,9 +65,8 @@ export async function updateClient(id: string, client: Omit<Client, 'id' | 'crea
     });
 
     if (!res.ok) throw new Error('Failed to update client');
-    
+
     const row: ClientDbRow = await res.json();
-    console.log('Response from API:', row);
     return dbRowToClient(row, row.name);
   } catch (error) {
     console.error('Error updating client:', error);

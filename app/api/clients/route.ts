@@ -22,57 +22,37 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const body = await request.json();
-    console.log('POST /api/clients - received body:', JSON.stringify(body, null, 2));
-    
-    const sql = getDb();
-    
-    // Validate that we have at least a name
-    if (!body.name) {
-      console.error('Missing required field: name');
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
-    }
+    const b = await request.json();
+    if (!b.name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
 
-    console.log('About to insert client with name:', body.name);
-    
-    let rows;
-    try {
-      rows = await sql`
-        INSERT INTO clients (
-          name, email, phone, website, industry, status, notes, primary_contact, created_by,
-          website_cms, website_login_url, website_username, website_password,
-          hosting, domain_registrar, google_analytics, search_console,
-          google_business_profile, tag_manager, other_tools
-        )
-        VALUES (
-          ${body.name}, ${body.email ?? null}, ${body.phone ?? null},
-          ${body.website ?? null}, ${body.industry ?? null}, ${'active'},
-          ${body.notes ?? null}, ${body.primary_contact ?? null}, ${session.user.id},
-          ${body.website_cms ?? null}, ${body.website_login_url ?? null}, ${body.website_username ?? null},
-          ${body.website_password ?? null}, ${body.hosting ?? null}, ${body.domain_registrar ?? null},
-          ${body.google_analytics ?? null}, ${body.search_console ?? null},
-          ${body.google_business_profile ?? null}, ${body.tag_manager ?? null}, ${body.other_tools ?? null}
-        )
-        RETURNING *
-      `;
-    } catch (sqlError) {
-      const sqlErrorMsg = sqlError instanceof Error ? sqlError.message : String(sqlError);
-      console.error('SQL Error:', sqlErrorMsg);
-      return NextResponse.json({ error: 'Failed to create client', details: `SQL: ${sqlErrorMsg}` }, { status: 500 });
-    }
-    
-    if (!rows || rows.length === 0) {
-      console.error('POST /api/clients - INSERT returned no rows');
-      return NextResponse.json({ error: 'Failed to create client', details: 'No rows returned from INSERT' }, { status: 500 });
-    }
-    
-    console.log('POST /api/clients - created client:', rows[0]);
+    const sql = getDb();
+    const rows = await sql`
+      INSERT INTO clients (
+        name, email, phone, website, industry, business_type, timezone, locations, service_areas,
+        notes, primary_contact, created_by,
+        website_cms, website_login_url, website_username, website_password,
+        hosting, domain_registrar, google_analytics, search_console,
+        google_business_profile, tag_manager, google_drive, other_tools,
+        main_services, priority_services, main_keywords, secondary_keywords,
+        target_locations, competitors, gbp_url, social_links
+      )
+      VALUES (
+        ${b.name}, ${b.email ?? null}, ${b.phone ?? null},
+        ${b.website ?? null}, ${b.industry ?? null}, ${b.business_type ?? null},
+        ${b.timezone ?? null}, ${b.locations ?? null}, ${b.service_areas ?? null},
+        ${b.notes ?? null}, ${b.primary_contact ?? null}, ${session.user.id},
+        ${b.website_cms ?? null}, ${b.website_login_url ?? null}, ${b.website_username ?? null}, ${b.website_password ?? null},
+        ${b.hosting ?? null}, ${b.domain_registrar ?? null}, ${b.google_analytics ?? null}, ${b.search_console ?? null},
+        ${b.google_business_profile ?? null}, ${b.tag_manager ?? null}, ${b.google_drive ?? null}, ${b.other_tools ?? null},
+        ${b.main_services ?? null}, ${b.priority_services ?? null}, ${b.main_keywords ?? null}, ${b.secondary_keywords ?? null},
+        ${b.target_locations ?? null}, ${b.competitors ?? null}, ${b.gbp_url ?? null}, ${b.social_links ?? null}
+      )
+      RETURNING *
+    `;
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error('clients POST error:', errorMsg);
-    console.error('Full error:', JSON.stringify(error, null, 2));
-    
-    return NextResponse.json({ error: 'Failed to create client', details: errorMsg }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('clients POST:', msg);
+    return NextResponse.json({ error: 'Failed to create client', details: msg }, { status: 500 });
   }
 }

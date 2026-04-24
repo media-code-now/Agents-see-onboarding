@@ -1,0 +1,31 @@
+-- Migration: Add all client detail fields
+-- Run this once in your Neon SQL editor if the clients table already exists.
+
+ALTER TABLE clients
+  ADD COLUMN IF NOT EXISTS business_type         VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS timezone              VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS locations             TEXT,
+  ADD COLUMN IF NOT EXISTS service_areas         TEXT,
+  ADD COLUMN IF NOT EXISTS website_cms           VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS website_login_url     VARCHAR(500),
+  ADD COLUMN IF NOT EXISTS website_username      VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS website_password      VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS hosting               VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS domain_registrar      VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS google_analytics      VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS search_console        VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS google_business_profile VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS tag_manager           VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS other_tools           TEXT,
+  ADD COLUMN IF NOT EXISTS main_services         TEXT,
+  ADD COLUMN IF NOT EXISTS priority_services     TEXT,
+  ADD COLUMN IF NOT EXISTS main_keywords         TEXT,
+  ADD COLUMN IF NOT EXISTS secondary_keywords    TEXT,
+  ADD COLUMN IF NOT EXISTS target_locations      TEXT,
+  ADD COLUMN IF NOT EXISTS competitors           TEXT,
+  ADD COLUMN IF NOT EXISTS gbp_url               VARCHAR(500),
+  ADD COLUMN IF NOT EXISTS social_links          TEXT,
+  ADD COLUMN IF NOT EXISTS google_drive          VARCHAR(500),
+  ADD COLUMN IF NOT EXISTS client_email          VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS client_password_hash  VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS client_password_temp  VARCHAR(255);

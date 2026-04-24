@@ -84,6 +84,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const loadDataFromApi = async () => {
       try {
+        // Ensure DB schema is up to date before fetching data (silent, non-blocking on failure)
+        try { await fetch('/api/db-init', { method: 'POST' }); } catch { /* ignore */ }
+
         const [clients, weeklyPlans, securityReviews, kanbanCards, teamMembers, notificationsData] = await Promise.all([
           apiClient.fetchClients(),
           apiClient.fetchWeeklyPlans(),

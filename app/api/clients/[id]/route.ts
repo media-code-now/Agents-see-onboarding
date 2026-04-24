@@ -25,29 +25,42 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id } = await params;
-    const body = await request.json();
+    const b = await request.json();
     const sql = getDb();
     const rows = await sql`
       UPDATE clients SET
-        name = ${body.name ?? null},
-        email = ${body.email ?? null},
-        phone = ${body.phone ?? null},
-        website = ${body.website ?? null},
-        industry = ${body.industry ?? null},
-        status = ${body.status ?? 'active'},
-        notes = ${body.notes ?? null},
-        website_cms = ${body.website_cms ?? null},
-        website_login_url = ${body.website_login_url ?? null},
-        website_username = ${body.website_username ?? null},
-        website_password = ${body.website_password ?? null},
-        hosting = ${body.hosting ?? null},
-        domain_registrar = ${body.domain_registrar ?? null},
-        google_analytics = ${body.google_analytics ?? null},
-        search_console = ${body.search_console ?? null},
-        google_business_profile = ${body.google_business_profile ?? null},
-        tag_manager = ${body.tag_manager ?? null},
-        other_tools = ${body.other_tools ?? null},
-        updated_at = NOW()
+        name                    = ${b.name ?? null},
+        email                   = ${b.email ?? null},
+        phone                   = ${b.phone ?? null},
+        website                 = ${b.website ?? null},
+        industry                = ${b.industry ?? null},
+        business_type           = ${b.business_type ?? null},
+        timezone                = ${b.timezone ?? null},
+        locations               = ${b.locations ?? null},
+        service_areas           = ${b.service_areas ?? null},
+        notes                   = ${b.notes ?? null},
+        primary_contact         = ${b.primary_contact ?? null},
+        website_cms             = ${b.website_cms ?? null},
+        website_login_url       = ${b.website_login_url ?? null},
+        website_username        = ${b.website_username ?? null},
+        website_password        = ${b.website_password ?? null},
+        hosting                 = ${b.hosting ?? null},
+        domain_registrar        = ${b.domain_registrar ?? null},
+        google_analytics        = ${b.google_analytics ?? null},
+        search_console          = ${b.search_console ?? null},
+        google_business_profile = ${b.google_business_profile ?? null},
+        tag_manager             = ${b.tag_manager ?? null},
+        google_drive            = ${b.google_drive ?? null},
+        other_tools             = ${b.other_tools ?? null},
+        main_services           = ${b.main_services ?? null},
+        priority_services       = ${b.priority_services ?? null},
+        main_keywords           = ${b.main_keywords ?? null},
+        secondary_keywords      = ${b.secondary_keywords ?? null},
+        target_locations        = ${b.target_locations ?? null},
+        competitors             = ${b.competitors ?? null},
+        gbp_url                 = ${b.gbp_url ?? null},
+        social_links            = ${b.social_links ?? null},
+        updated_at              = NOW()
       WHERE id = ${id}
       RETURNING *
     `;

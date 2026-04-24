@@ -19,13 +19,18 @@ export default function ClientsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [viewingClient, setViewingClient] = useState<Client | null>(null);
+  const [viewingClientId, setViewingClientId] = useState<string | null>(null);
+  const viewingClient = useMemo(
+    () => data.clients.find(c => c.id === viewingClientId) ?? null,
+    [data.clients, viewingClientId]
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showPasswords, setShowPasswords] = useState(false);
   const [generatingPassword, setGeneratingPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [generatedTempPassword, setGeneratedTempPassword] = useState<string | null>(null);
-  
+
   // Filter states
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
@@ -86,8 +91,9 @@ export default function ClientsPage() {
     (startDate ? 1 : 0) +
     (endDate ? 1 : 0);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSaving(true);
     const formData = new FormData(e.currentTarget);
 
     const clientData = {
@@ -128,15 +134,13 @@ export default function ClientsPage() {
       notes: formData.get('notes') as string,
     };
 
-    // Debug log
-    console.log('Form submitted - businessName:', clientData.businessName);
-
     if (editingClient) {
-      updateClient(editingClient.id, clientData);
+      await updateClient(editingClient.id, clientData);
     } else {
-      addClient(clientData);
+      await addClient(clientData);
     }
 
+    setIsSaving(false);
     setIsModalOpen(false);
     setEditingClient(null);
   };
@@ -147,7 +151,7 @@ export default function ClientsPage() {
   };
 
   const handleView = (client: Client) => {
-    setViewingClient(client);
+    setViewingClientId(client.id);
     setViewModalOpen(true);
   };
 
@@ -718,19 +722,21 @@ export default function ClientsPage() {
           <div className="flex gap-3 pt-4">
             <button
               type="button"
+              disabled={isSaving}
               onClick={() => {
                 setIsModalOpen(false);
                 setEditingClient(null);
               }}
-              className="flex-1 rounded-2xl border border-white/10 px-6 py-3 text-sm font-medium text-gray-400 transition-colors hover:bg-white/10"
+              className="flex-1 rounded-2xl border border-white/10 px-6 py-3 text-sm font-medium text-gray-400 transition-colors hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-2xl bg-blue-500 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-600 hover:scale-105"
+              disabled={isSaving}
+              className="flex-1 rounded-2xl bg-blue-500 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-600 hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {editingClient ? 'Update' : 'Create'} Client
+              {isSaving ? 'Saving…' : (editingClient ? 'Update' : 'Create') + ' Client'}
             </button>
           </div>
         </form>
@@ -742,7 +748,7 @@ export default function ClientsPage() {
           isOpen={viewModalOpen}
           onClose={() => {
             setViewModalOpen(false);
-            setViewingClient(null);
+            setViewingClientId(null);
           }}
           title={`Client Details: ${viewingClient.businessName}`}
         >
@@ -1009,7 +1015,7 @@ export default function ClientsPage() {
               <button
                 onClick={() => {
                   setViewModalOpen(false);
-                  setViewingClient(null);
+                  setViewingClientId(null);
                 }}
                 className="flex-1 rounded-2xl border border-white/10 px-6 py-3 text-sm font-medium text-gray-400 transition-colors hover:bg-white/10"
               >

@@ -1,11 +1,12 @@
 /**
  * API Adapter Layer
- * Converts between database schema and TypeScript types to handle schema mismatch
+ * Converts between database schema (snake_case) and TypeScript types (camelCase)
  */
 
 import { Client, WeeklyPlan, SecurityReview, KanbanCard } from '@/types';
 
-// Database response types
+// ─── Database response types ──────────────────────────────────────────────────
+
 export interface ClientDbRow {
   id: string;
   name: string;
@@ -14,18 +15,17 @@ export interface ClientDbRow {
   website?: string;
   google_drive?: string;
   industry?: string;
+  business_type?: string;
+  timezone?: string;
+  locations?: string;
+  service_areas?: string;
   status: string;
   monthly_budget?: number;
   contract_start?: string;
   contract_end?: string;
   notes?: string;
   primary_contact?: string;
-  created_date: string;
-  created_by?: string;
-  updated_at?: string;
-  client_email?: string;
-  client_password_hash?: string;
-  client_password_temp?: string;
+  // Access & Logins
   website_cms?: string;
   website_login_url?: string;
   website_username?: string;
@@ -37,6 +37,22 @@ export interface ClientDbRow {
   google_business_profile?: string;
   tag_manager?: string;
   other_tools?: string;
+  // Services & SEO Basics
+  main_services?: string;
+  priority_services?: string;
+  main_keywords?: string;
+  secondary_keywords?: string;
+  target_locations?: string;
+  competitors?: string;
+  gbp_url?: string;
+  social_links?: string;
+  // Client portal
+  client_email?: string;
+  client_password_hash?: string;
+  client_password_temp?: string;
+  created_date: string;
+  created_by?: string;
+  updated_at?: string;
 }
 
 export interface WeeklyPlanDbRow {
@@ -86,7 +102,7 @@ export interface KanbanCardDbRow {
   updated_at?: string;
 }
 
-// Adapters: Database -> TypeScript Types
+// ─── DB → TypeScript ──────────────────────────────────────────────────────────
 
 export function dbRowToClient(row: ClientDbRow, clientName?: string): Client {
   return {
@@ -94,21 +110,17 @@ export function dbRowToClient(row: ClientDbRow, clientName?: string): Client {
     businessName: clientName || row.name,
     website: row.website,
     industry: row.industry || 'Not Specified',
-    businessType: row.industry,
-    googleDrive: row.google_drive,
-    mainContact: row.email || row.phone ? {
-      name: row.primary_contact || 'Contact',
+    businessType: row.business_type || row.industry,
+    timezone: row.timezone,
+    locations: row.locations,
+    serviceAreas: row.service_areas,
+    mainContact: (row.primary_contact || row.email || row.phone) ? {
+      name: row.primary_contact || '',
       email: row.email || '',
       phone: row.phone || '',
     } : undefined,
     notes: row.notes,
-    createdDate: row.created_date,
-    clientEmail: row.client_email,
-    clientPasswordTemp: row.client_password_temp,
-    // Optional fields with defaults
-    timezone: undefined,
-    locations: undefined,
-    serviceAreas: undefined,
+    // Access & Logins
     websiteCMS: row.website_cms,
     websiteLoginURL: row.website_login_url,
     websiteUsername: row.website_username,
@@ -119,15 +131,21 @@ export function dbRowToClient(row: ClientDbRow, clientName?: string): Client {
     searchConsole: row.search_console,
     googleBusinessProfile: row.google_business_profile,
     tagManager: row.tag_manager,
+    googleDrive: row.google_drive,
     otherTools: row.other_tools,
-    mainServices: undefined,
-    priorityServices: undefined,
-    mainKeywords: undefined,
-    secondaryKeywords: undefined,
-    targetLocations: undefined,
-    competitors: undefined,
-    gbpURL: undefined,
-    socialLinks: undefined,
+    // Services & SEO Basics
+    mainServices: row.main_services,
+    priorityServices: row.priority_services,
+    mainKeywords: row.main_keywords,
+    secondaryKeywords: row.secondary_keywords,
+    targetLocations: row.target_locations,
+    competitors: row.competitors,
+    gbpURL: row.gbp_url,
+    socialLinks: row.social_links,
+    // Client portal
+    clientEmail: row.client_email,
+    clientPasswordTemp: row.client_password_temp,
+    createdDate: row.created_date,
   };
 }
 
@@ -136,7 +154,7 @@ export function dbRowToWeeklyPlan(row: WeeklyPlanDbRow, clientName: string): Wee
     id: row.id,
     clientName,
     weekOf: row.week_start,
-    status: (row.status as any) || 'Stable',
+    status: (row.status as WeeklyPlan['status']) || 'Stable',
     mainFocus: row.focus_areas || [],
     notes: row.notes,
     onPageTasks: undefined,
@@ -150,15 +168,10 @@ export function dbRowToWeeklyPlan(row: WeeklyPlanDbRow, clientName: string): Wee
 }
 
 export function dbRowToSecurityReview(row: SecurityReviewDbRow, clientName: string): SecurityReview {
-  // Map status to risk level
-  const statusToRisk: { [key: string]: 'Low' | 'Medium' | 'High' } = {
-    'low': 'Low',
-    'medium': 'Medium',
-    'high': 'High',
-    'pending': 'Medium',
-    'completed': 'Low',
+  const statusToRisk: Record<string, 'Low' | 'Medium' | 'High'> = {
+    low: 'Low', medium: 'Medium', high: 'High',
+    pending: 'Medium', completed: 'Low',
   };
-
   return {
     id: row.id,
     clientName,
@@ -166,7 +179,7 @@ export function dbRowToSecurityReview(row: SecurityReviewDbRow, clientName: stri
     riskLevel: statusToRisk[row.status?.toLowerCase()] || 'Medium',
     criticalRisks: 0,
     missingAccess: 0,
-    status: (row.status as 'Pending' | 'In Progress' | 'Resolved') || 'Pending',
+    status: (row.status as SecurityReview['status']) || 'Pending',
     notes: row.notes,
   };
 }
@@ -177,9 +190,9 @@ export function dbRowToKanbanCard(row: KanbanCardDbRow): KanbanCard {
     clientName: (row as any).client_name || `Client ${row.client_id || 'Unknown'}`,
     title: row.title,
     description: row.description,
-    column: row.column as any,
+    column: row.column as KanbanCard['column'],
     assignedTo: row.assigned_to,
-    priority: row.priority as any,
+    priority: row.priority as KanbanCard['priority'],
     createdDate: row.created_at,
     updatedDate: row.updated_at || row.created_at,
     dueDate: row.due_date,
@@ -187,18 +200,22 @@ export function dbRowToKanbanCard(row: KanbanCardDbRow): KanbanCard {
   };
 }
 
-// Adapters: TypeScript Types -> Database Row (for creation/updates)
+// ─── TypeScript → DB ──────────────────────────────────────────────────────────
 
 export function clientToDbRow(client: Omit<Client, 'id' | 'createdDate'>): Partial<ClientDbRow> {
   return {
     name: client.businessName,
     email: client.mainContact?.email,
     phone: client.mainContact?.phone,
+    primary_contact: client.mainContact?.name,
     website: client.website,
     industry: client.industry,
+    business_type: client.businessType,
+    timezone: client.timezone,
+    locations: client.locations,
+    service_areas: client.serviceAreas,
     notes: client.notes,
-    primary_contact: client.mainContact?.name,
-    google_drive: client.googleDrive,
+    // Access & Logins
     website_cms: client.websiteCMS,
     website_login_url: client.websiteLoginURL,
     website_username: client.websiteUsername,
@@ -209,7 +226,17 @@ export function clientToDbRow(client: Omit<Client, 'id' | 'createdDate'>): Parti
     search_console: client.searchConsole,
     google_business_profile: client.googleBusinessProfile,
     tag_manager: client.tagManager,
+    google_drive: client.googleDrive,
     other_tools: client.otherTools,
+    // Services & SEO Basics
+    main_services: client.mainServices,
+    priority_services: client.priorityServices,
+    main_keywords: client.mainKeywords,
+    secondary_keywords: client.secondaryKeywords,
+    target_locations: client.targetLocations,
+    competitors: client.competitors,
+    gbp_url: client.gbpURL,
+    social_links: client.socialLinks,
   };
 }
 
