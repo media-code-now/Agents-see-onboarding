@@ -53,6 +53,55 @@ async function ensureColumns(
   return added;
 }
 
+async function fixKanbanConstraints(sql: ReturnType<typeof getDb>) {
+  const fixes: string[] = [];
+
+  // Fix column CHECK constraint — add 'backlog' if missing
+  const constraints = await sql`
+    SELECT pg_get_constraintdef(oid) AS def
+    FROM pg_constraint
+    WHERE conrelid = 'kanban_cards'::regclass AND conname = 'kanban_cards_column_check'
+  `;
+  const def: string = constraints[0]?.def ?? '';
+  if (!def.includes('backlog')) {
+    await sql.unsafe(`ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_column_check`);
+    await sql.unsafe(`ALTER TABLE kanban_cards ADD CONSTRAINT kanban_cards_column_check CHECK ("column" IN ('backlog','todo','in-progress','review','done'))`);
+    fixes.push('column_check');
+  }
+
+  // Fix assigned_to — drop FK if it exists, change to TEXT if still UUID
+  const fkRows = await sql`
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'kanban_cards'::regclass
+      AND conname = 'kanban_cards_assigned_to_fkey'
+  `;
+  if (fkRows.length) {
+    await sql.unsafe(`ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_assigned_to_fkey`);
+    fixes.push('assigned_to_fkey_dropped');
+  }
+
+  const colType = await sql`
+    SELECT data_type FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'kanban_cards' AND column_name = 'assigned_to'
+  `;
+  if (colType[0]?.data_type === 'uuid') {
+    await sql.unsafe(`ALTER TABLE kanban_cards ALTER COLUMN assigned_to TYPE TEXT USING (assigned_to::TEXT)`);
+    fixes.push('assigned_to_type_text');
+  }
+
+  // Make week_end nullable if it isn't already
+  const weekEndNullable = await sql`
+    SELECT is_nullable FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'weekly_plans' AND column_name = 'week_end'
+  `;
+  if (weekEndNullable[0]?.is_nullable === 'NO') {
+    await sql.unsafe(`ALTER TABLE weekly_plans ALTER COLUMN week_end DROP NOT NULL`);
+    fixes.push('week_end_nullable');
+  }
+
+  return fixes;
+}
+
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
@@ -64,8 +113,9 @@ export async function POST() {
     const kanbanAdded    = await ensureColumns(sql, 'kanban_cards', [
       { name: 'category', ddl: "VARCHAR(100) DEFAULT 'Other'" },
     ]);
+    const kanbanFixes    = await fixKanbanConstraints(sql);
 
-    return NextResponse.json({ ok: true, clients: clientAdded, kanban: kanbanAdded });
+    return NextResponse.json({ ok: true, clients: clientAdded, kanban: kanbanAdded, kanbanFixes });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('db-init POST:', msg);

@@ -39,7 +39,13 @@ export async function POST(request: Request) {
 
     // Accept both camelCase and snake_case keys
     const weekStart = body.week_start || body.weekStart || null;
-    const weekEnd   = body.week_end   || body.weekEnd   || null;
+    // Auto-calculate week_end (start + 6 days) so the NOT NULL constraint is always satisfied
+    const weekEnd = body.week_end || body.weekEnd || (() => {
+      if (!weekStart) return null;
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + 6);
+      return d.toISOString().split('T')[0];
+    })();
 
     const rows = await sql`
       INSERT INTO weekly_plans
