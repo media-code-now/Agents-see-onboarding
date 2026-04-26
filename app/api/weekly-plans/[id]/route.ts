@@ -26,8 +26,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const body = await request.json();
     const sql = getDb();
     const rows = await sql`
-      UPDATE weekly_plans SET status = ${body.status ?? 'in-progress'}, goals = ${body.goals ?? null},
-        notes = ${body.notes ?? null}, updated_at = NOW() WHERE id = ${id} RETURNING *
+      UPDATE weekly_plans SET
+        status       = ${body.status ?? 'in-progress'},
+        focus_areas  = ${body.focus_areas ?? null},
+        goals        = ${body.goals ?? null},
+        deliverables = ${body.deliverables ?? null},
+        notes        = ${body.notes ?? null},
+        updated_at   = NOW()
+      WHERE id = ${id}
+      RETURNING *,
+        (SELECT name FROM clients WHERE id = client_id) AS client_name
     `;
     if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(rows[0]);

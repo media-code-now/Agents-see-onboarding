@@ -34,6 +34,25 @@ const REQUIRED_CLIENT_COLUMNS: Array<{ name: string; ddl: string }> = [
   { name: 'client_password_temp',   ddl: 'VARCHAR(255)' },
 ];
 
+async function ensureColumns(
+  sql: ReturnType<typeof getDb>,
+  tableName: string,
+  cols: Array<{ name: string; ddl: string }>,
+) {
+  const existingCols = await sql`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = ${tableName}
+  `;
+  const existing = new Set(existingCols.map((r) => (r as { column_name: string }).column_name));
+  const added: string[] = [];
+  for (const col of cols) {
+    if (existing.has(col.name)) continue;
+    await sql.unsafe(`ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS ${col.name} ${col.ddl}`);
+    added.push(col.name);
+  }
+  return added;
+}
+
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
@@ -41,27 +60,12 @@ export async function POST() {
 
     const sql = getDb();
 
-    // Get current columns in the clients table
-    const existingCols = await sql`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_schema = 'public' AND table_name = 'clients'
-    `;
-    const existing = new Set(existingCols.map((r) => (r as { column_name: string }).column_name));
+    const clientAdded    = await ensureColumns(sql, 'clients', REQUIRED_CLIENT_COLUMNS);
+    const kanbanAdded    = await ensureColumns(sql, 'kanban_cards', [
+      { name: 'category', ddl: "VARCHAR(100) DEFAULT 'Other'" },
+    ]);
 
-    const added: string[] = [];
-    const skipped: string[] = [];
-
-    for (const col of REQUIRED_CLIENT_COLUMNS) {
-      if (existing.has(col.name)) {
-        skipped.push(col.name);
-        continue;
-      }
-      // Add column using unsafe (DDL can't use parameterised queries)
-      await sql.unsafe(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS ${col.name} ${col.ddl}`);
-      added.push(col.name);
-    }
-
-    return NextResponse.json({ ok: true, added, skipped });
+    return NextResponse.json({ ok: true, clients: clientAdded, kanban: kanbanAdded });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('db-init POST:', msg);

@@ -29,11 +29,31 @@ export async function POST(request: Request) {
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await request.json();
     const sql = getDb();
+
+    // Look up client_id from clientName
+    let clientId: string | null = null;
+    if (body.clientName) {
+      const clientRows = await sql`SELECT id FROM clients WHERE name = ${body.clientName} LIMIT 1`;
+      clientId = clientRows[0]?.id ?? null;
+    }
+
+    // Accept both camelCase and snake_case keys
+    const weekStart = body.week_start || body.weekStart || null;
+    const weekEnd   = body.week_end   || body.weekEnd   || null;
+
     const rows = await sql`
-      INSERT INTO weekly_plans (client_id, week_start, week_end, status, goals, notes, created_by)
-      VALUES (${body.clientId ?? null}, ${body.weekStart ?? null}, ${body.weekEnd ?? null},
-              ${body.status ?? 'in-progress'}, ${body.goals ?? null}, ${body.notes ?? null}, ${session.user.id})
-      RETURNING *
+      INSERT INTO weekly_plans
+        (client_id, week_start, week_end, status, focus_areas, goals, deliverables, notes, created_by)
+      VALUES
+        (${clientId}, ${weekStart}, ${weekEnd},
+         ${body.status ?? 'in-progress'},
+         ${body.focus_areas ?? null},
+         ${body.goals ?? null},
+         ${body.deliverables ?? null},
+         ${body.notes ?? null},
+         ${session.user.id})
+      RETURNING *,
+        (SELECT name FROM clients WHERE id = client_id) AS client_name
     `;
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {

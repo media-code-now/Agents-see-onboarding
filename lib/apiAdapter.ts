@@ -246,8 +246,9 @@ export function clientToDbRow(client: Omit<Client, 'id' | 'createdDate'>): Parti
   };
 }
 
-export function weeklyPlanToDbRow(plan: Omit<WeeklyPlan, 'id'>): Partial<WeeklyPlanDbRow> {
+export function weeklyPlanToDbRow(plan: Omit<WeeklyPlan, 'id'>): Partial<WeeklyPlanDbRow> & { clientName?: string } {
   return {
+    clientName: plan.clientName,
     week_start: plan.weekOf,
     status: plan.status,
     focus_areas: plan.mainFocus,
