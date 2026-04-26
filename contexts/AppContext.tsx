@@ -76,11 +76,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { data: session, status } = useSession();
   const [isLoadingFromDb, setIsLoadingFromDb] = useState(true);
-  const hasLoadedDb = useRef(false);
+  const [hasLoadedDb, setHasLoadedDb] = useState(false);
 
   // Fetch data from API when authenticated
   useEffect(() => {
-    if (status !== 'authenticated' || hasLoadedDb.current) return;
+    if (status !== 'authenticated' || hasLoadedDb) return;
 
     const loadDataFromApi = async () => {
       try {
@@ -126,10 +126,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           notifications: mappedNotifications,
         }));
 
-        hasLoadedDb.current = true;
+        setHasLoadedDb(true);
       } catch (error) {
         console.error('Error loading data from API:', error);
-        hasLoadedDb.current = true;
+        setHasLoadedDb(true);
         // Keep existing data on error
       } finally {
         setIsLoadingFromDb(false);
@@ -138,11 +138,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setIsLoadingFromDb(true);
     loadDataFromApi();
-  }, [status]);
+  }, [status, hasLoadedDb]);
 
   // Periodic refresh of data from API to sync changes from other users
   useEffect(() => {
-    if (status !== 'authenticated' || !hasLoadedDb.current) return;
+    if (status !== 'authenticated' || !hasLoadedDb) return;
 
     const refreshDataFromApi = async () => {
       try {
@@ -192,7 +192,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // Refresh every 30 seconds to keep data synced across users
     const interval = setInterval(refreshDataFromApi, 30 * 1000);
     return () => clearInterval(interval);
-  }, [status]);
+  }, [status, hasLoadedDb]);
 
   useEffect(() => {
     saveData(data);
