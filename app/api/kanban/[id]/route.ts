@@ -11,28 +11,34 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const body = await request.json();
     const sql = getDb();
 
-    // Look up client_id from clientName if provided
-    let clientId: string | null = null;
-    if (body.clientName) {
+    const clauses: string[] = [];
+    const values: unknown[] = [];
+    let i = 1;
+
+    if ('clientName' in body) {
       const clientRows = await sql`SELECT id FROM clients WHERE name = ${body.clientName} LIMIT 1`;
-      clientId = clientRows[0]?.id ?? null;
+      clauses.push(`client_id = $${i++}`);
+      values.push(clientRows[0]?.id ?? null);
+    }
+    if ('title'       in body) { clauses.push(`title = $${i++}`);        values.push(body.title); }
+    if ('description' in body) { clauses.push(`description = $${i++}`);  values.push(body.description); }
+    if ('column'      in body) { clauses.push(`"column" = $${i++}`);     values.push(body.column); }
+    if ('priority'    in body) { clauses.push(`priority = $${i++}`);     values.push(body.priority); }
+    if ('assignedTo'  in body) { clauses.push(`assigned_to = $${i++}`);  values.push(body.assignedTo); }
+    if ('dueDate'     in body) { clauses.push(`due_date = $${i++}`);     values.push(body.dueDate); }
+    if ('category'    in body) { clauses.push(`category = $${i++}`);     values.push(body.category); }
+    if ('tags'        in body) { clauses.push(`tags = $${i++}`);         values.push(body.tags); }
+
+    if (clauses.length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
-    const rows = await sql`
-      UPDATE kanban_cards SET
-        client_id   = COALESCE(${clientId}, client_id),
-        title       = COALESCE(${body.title ?? null}, title),
-        description = ${body.description ?? null},
-        "column"    = COALESCE(${body.column ?? null}, "column"),
-        priority    = COALESCE(${body.priority ?? null}, priority),
-        assigned_to = ${body.assignedTo ?? null},
-        due_date    = ${body.dueDate ?? null},
-        category    = COALESCE(${body.category ?? null}, category),
-        tags        = ${body.tags ?? null}
-      WHERE id = ${id}
-      RETURNING *,
-        (SELECT name FROM clients WHERE id = client_id) AS client_name
-    `;
+    values.push(id);
+    const rows = await sql.unsafe(
+      `UPDATE kanban_cards SET ${clauses.join(', ')} WHERE id = $${i}
+       RETURNING *, (SELECT name FROM clients WHERE id = client_id) AS client_name`,
+      values as string[]
+    );
     if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(rows[0]);
   } catch (error) {
