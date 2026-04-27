@@ -14,9 +14,9 @@ export const metadata: Metadata = {
   title: "SEO Agency Onboarding System",
   description: "Organize client onboarding, security reviews, and team access",
   icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
   },
 };
 
