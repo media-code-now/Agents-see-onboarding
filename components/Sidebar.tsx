@@ -17,6 +17,12 @@ import {
   History
 } from 'lucide-react';
 
+const mobileNav = [
+  { name: 'Dashboard',    href: '/',        icon: LayoutDashboard },
+  { name: 'Clients',      href: '/clients', icon: Users },
+  { name: 'Kanban Board', href: '/kanban',  icon: KanbanSquare },
+];
+
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Clients', href: '/clients', icon: Users },
@@ -82,6 +88,26 @@ export default function Sidebar() {
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
+
+      {/* Mobile Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex lg:hidden border-t border-white/10 bg-black/80 backdrop-blur-xl">
+        {mobileNav.map((item) => {
+          const isActive = pathname === item.href;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={`relative flex flex-1 flex-col items-center gap-1 py-3 text-xs font-semibold transition-colors
+                ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              <Icon className="h-5 w-5" />
+              <span>{item.name}</span>
+              {isActive && <span className="absolute bottom-0 left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full bg-white" />}
+            </Link>
+          );
+        })}
+      </nav>
 
       {/* Sidebar */}
       <aside
