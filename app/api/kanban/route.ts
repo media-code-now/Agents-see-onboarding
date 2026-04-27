@@ -10,6 +10,7 @@ async function ensureKanbanSchema() {
   const sql = getDb();
   await sql.query("ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Other'");
   await sql.query('ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_assigned_to_fkey');
+  await sql.query('ALTER TABLE kanban_cards ALTER COLUMN assigned_to TYPE TEXT USING (assigned_to::TEXT)');
   await sql.query('ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_column_check');
   await sql.query(`ALTER TABLE kanban_cards ADD CONSTRAINT kanban_cards_column_check CHECK ("column" IN ('backlog','todo','in-progress','review','done'))`);
   _schemaReady = true;
