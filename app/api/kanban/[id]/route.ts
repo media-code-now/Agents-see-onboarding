@@ -11,6 +11,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const body = await request.json();
     const sql = getDb();
 
+    // Ensure category column exists (idempotent DDL — no-op if already present)
+    await sql`${sql.unsafe("ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Other'")}`;
+
     const clauses: string[] = [];
     const values: unknown[] = [];
     let i = 1;
@@ -34,10 +37,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     values.push(id);
-    const rows = await sql.unsafe(
+    const rows = await sql.query(
       `UPDATE kanban_cards SET ${clauses.join(', ')} WHERE id = $${i}
        RETURNING *, (SELECT name FROM clients WHERE id = client_id) AS client_name`,
-      values as string[]
+      values
     );
     if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(rows[0]);
