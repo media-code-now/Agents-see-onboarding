@@ -456,8 +456,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const moveKanbanCard = async (id: string, newColumn: KanbanCard['column']) => {
     const before = data.kanbanCards.find((c) => c.id === id);
-    await apiClient.updateKanbanCard(id, { column: newColumn });
-    
+    const result = await apiClient.updateKanbanCard(id, { column: newColumn });
+    if (!result) return;
+
     setData((prev) => ({
       ...prev,
       kanbanCards: prev.kanbanCards.map((c) =>

@@ -28,8 +28,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         assigned_to = ${body.assignedTo ?? null},
         due_date    = ${body.dueDate ?? null},
         category    = COALESCE(${body.category ?? null}, category),
-        tags        = ${body.tags ?? null},
-        updated_date = NOW()
+        tags        = ${body.tags ?? null}
       WHERE id = ${id}
       RETURNING *,
         (SELECT name FROM clients WHERE id = client_id) AS client_name
@@ -37,8 +36,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(rows[0]);
   } catch (error) {
-    console.error('kanban PUT:', error);
-    return NextResponse.json({ error: 'Failed to update kanban card' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('kanban PUT:', msg);
+    return NextResponse.json({ error: 'Failed to update kanban card', detail: msg }, { status: 500 });
   }
 }
 
