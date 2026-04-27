@@ -114,7 +114,8 @@ export async function POST() {
 
     const clientAdded    = await ensureColumns(sql, 'clients', REQUIRED_CLIENT_COLUMNS);
     const kanbanAdded    = await ensureColumns(sql, 'kanban_cards', [
-      { name: 'category', ddl: "VARCHAR(100) DEFAULT 'Other'" },
+      { name: 'category',     ddl: "VARCHAR(100) DEFAULT 'Other'" },
+      { name: 'updated_date', ddl: 'TIMESTAMP WITH TIME ZONE DEFAULT NOW()' },
     ]);
     const kanbanFixes    = await fixKanbanConstraints(sql);
 
