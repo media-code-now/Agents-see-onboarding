@@ -3,16 +3,26 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/nextauth';
 import { getDb } from '@/lib/db';
 
+let _schemaReady = false;
+async function ensureKanbanSchema() {
+  if (_schemaReady) return;
+  const sql = getDb();
+  await sql.query("ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Other'");
+  await sql.query('ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_assigned_to_fkey');
+  await sql.query('ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_column_check');
+  await sql.query(`ALTER TABLE kanban_cards ADD CONSTRAINT kanban_cards_column_check CHECK ("column" IN ('backlog','todo','in-progress','review','done'))`);
+  _schemaReady = true;
+}
+
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { id } = await params;
     const body = await request.json();
-    const sql = getDb();
 
-    // Ensure category column exists (idempotent DDL — no-op if already present)
-    await sql`${sql.unsafe("ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Other'")}`;
+    await ensureKanbanSchema();
+    const sql = getDb();
 
     const clauses: string[] = [];
     const values: unknown[] = [];

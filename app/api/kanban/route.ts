@@ -3,6 +3,18 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/nextauth';
 import { getDb } from '@/lib/db';
 
+// Runs once per Lambda instance — cheap no-ops on warm invocations
+let _schemaReady = false;
+async function ensureKanbanSchema() {
+  if (_schemaReady) return;
+  const sql = getDb();
+  await sql.query("ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Other'");
+  await sql.query('ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_assigned_to_fkey');
+  await sql.query('ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_column_check');
+  await sql.query(`ALTER TABLE kanban_cards ADD CONSTRAINT kanban_cards_column_check CHECK ("column" IN ('backlog','todo','in-progress','review','done'))`);
+  _schemaReady = true;
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -28,39 +40,34 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await request.json();
+
+    await ensureKanbanSchema();
     const sql = getDb();
 
-    // Ensure schema columns exist before INSERT (idempotent)
-    await sql`${sql.unsafe("ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Other'")}`;
-    await sql`${sql.unsafe("ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_assigned_to_fkey")}`;
-    await sql`${sql.unsafe("ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_column_check")}`;
-    await sql`${sql.unsafe("ALTER TABLE kanban_cards ADD CONSTRAINT kanban_cards_column_check CHECK (\"column\" IN ('backlog','todo','in-progress','review','done'))")}`;
-
-    // Look up client_id from clientName
     let clientId: string | null = null;
     if (body.clientName) {
       const clientRows = await sql`SELECT id FROM clients WHERE name = ${body.clientName} LIMIT 1`;
       clientId = clientRows[0]?.id ?? null;
     }
 
-    const rows = await sql.query(
-      `INSERT INTO kanban_cards
-         (client_id, title, description, "column", priority, assigned_to, due_date, category, tags, order_index, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,0,$10)
-       RETURNING *, (SELECT name FROM clients WHERE id = client_id) AS client_name`,
-      [
-        clientId,
-        body.title,
-        body.description ?? null,
-        body.column ?? 'backlog',
-        body.priority ?? 'medium',
-        body.assignedTo ?? null,
-        body.dueDate ?? null,
-        body.category ?? 'Other',
-        body.tags ?? null,
-        session.user.id,
-      ]
-    );
+    const rows = await sql`
+      INSERT INTO kanban_cards
+        (client_id, title, description, "column", priority, assigned_to, due_date, category, tags, order_index, created_by)
+      VALUES
+        (${clientId},
+         ${body.title},
+         ${body.description ?? null},
+         ${body.column ?? 'backlog'},
+         ${body.priority ?? 'medium'},
+         ${body.assignedTo ?? null},
+         ${body.dueDate ?? null},
+         ${body.category ?? 'Other'},
+         ${body.tags ?? null},
+         0,
+         ${session.user.id})
+      RETURNING *,
+        (SELECT name FROM clients WHERE id = client_id) AS client_name
+    `;
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
