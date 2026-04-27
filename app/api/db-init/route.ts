@@ -58,11 +58,13 @@ async function fixKanbanConstraints(sql: ReturnType<typeof getDb>) {
 
   // Fix column CHECK constraint — add 'backlog' if missing
   const constraints = await sql`
-    SELECT pg_get_constraintdef(oid) AS def
-    FROM pg_constraint
-    WHERE conrelid = 'kanban_cards'::regclass AND conname = 'kanban_cards_column_check'
+    SELECT pg_get_constraintdef(c.oid) AS def
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public' AND t.relname = 'kanban_cards' AND c.conname = 'kanban_cards_column_check'
   `;
-  const def: string = constraints[0]?.def ?? '';
+  const def: string = (constraints[0] as { def?: string })?.def ?? '';
   if (!def.includes('backlog')) {
     await sql.unsafe(`ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_column_check`);
     await sql.unsafe(`ALTER TABLE kanban_cards ADD CONSTRAINT kanban_cards_column_check CHECK ("column" IN ('backlog','todo','in-progress','review','done'))`);
@@ -71,9 +73,10 @@ async function fixKanbanConstraints(sql: ReturnType<typeof getDb>) {
 
   // Fix assigned_to — drop FK if it exists, change to TEXT if still UUID
   const fkRows = await sql`
-    SELECT 1 FROM pg_constraint
-    WHERE conrelid = 'kanban_cards'::regclass
-      AND conname = 'kanban_cards_assigned_to_fkey'
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public' AND t.relname = 'kanban_cards' AND c.conname = 'kanban_cards_assigned_to_fkey'
   `;
   if (fkRows.length) {
     await sql.unsafe(`ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_assigned_to_fkey`);
